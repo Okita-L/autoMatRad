@@ -2,99 +2,94 @@
 % Sept. 2025 By Hang Lian
 % To load and process the raw data automatically
 auto_rc; % 将所需要的全部文件夹加入matlab的搜索路径
-
+% 禁用GUI
+matRad_cfg = MatRad_Config.instance();
+matRad_cfg.disableGUI = true;
 % 设置DICOM源文件夹 和 生成的mat文件存放的目的文件夹
-source_path_of_Dicom = 'E:\LG_PCT';
+source_path_of_Dicom = 'E:\LG_PCT_Demo';
 projectPath = fileparts(mfilename("fullpath")); % 'E:\Workshop\autoMatRad\src\utils'
-projectPath = fileparts(projectPath)
-projectPath = fileparts(projectPath) % 'E:\Workshop\autoMatRad'
+projectPath = fileparts(projectPath);
+projectPath = fileparts(projectPath); % 'E:\Workshop\autoMatRad'
 dest_path_of_rawMat = fullfile(projectPath,"data/mat_data/"); % 'E:\Workshop\autoMatRad\data\mat_data'
 
+if ~exist(dest_path_of_rawMat,'dir')
+    mkdir(dest_path_of_rawMat);
+end
+
 allItems = dir(source_path_of_Dicom);
-% 过滤当前目录和父目录 . 和 ..
+% 过滤当前目录和父目录 . 和 .. 以及非文件夹项
+allItems = allItems([allItems.isdir])
 allItems = allItems(~ismember({allItems.name},{'.','..'}));
+fprintf('总共找到 %d 个病人文件夹。\n', numel(allItems));
 
-
-% 出错 matRad_DicomImporter/matRad_importDicomRTPlan (第 139 行)
-% if isfield(BeamSequence.Item_1, 'TreatmentMachineName')
-%            ^^^^^^^^^^^^^^^^^^^
-% 出错 matRad_DicomImporter/matRad_importDicom (第 143 行)
-%         obj = matRad_importDicomRTPlan(obj);
-%               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-% 出错 auto (第 22 行)
-%     importer.matRad_importDicom();
-% 推测 未设置pln
-% TODO：检查对应examples里面的流程
-
-% 师姐的Get_matRad代码是否值得保留？
-% %% Treatment Plan
-% % The next step is to define your treatment plan labeled as 'pln'. This 
-% % structure requires input from the treatment planner and defines the most 
-% % important cornerstones of your treatment plan.
+% importer.pln.radiationMode = 'protons';        
+importer.pln.machine       = 'Generic';
+% importer.pln.bioModel      = 'constRBE';
+% importer.pln.multScen      = 'nomScen';
 % 
-% %%
-% % First of all, we need to define what kind of radiation modality we would
-% % like to use. Possible values are photons, protons or carbon. In this
-% % example we would like to use protons for treatment planning. Next, we
-% % need to define a treatment machine to correctly load the corresponding 
-% % base data. matRad features generic base data in the file
-% % 'proton_Generic.mat'; consequently the machine has to be set accordingly
-% pln.radiationMode = 'protons';        
-% pln.machine       = 'Generic';
-% pln.bioModel      = 'constRBE';
-% pln.multScen      = 'nomScen';
+% importer.pln.propDoseCalc.calcLET = 0;
+% importer.pln.propDoseCalc.engine = 'HongPB';
 % 
-% %%
-% % for particles it is possible to also calculate the LET disutribution
-% % alongside the physical dose. Therefore you need to activate the
-% % corresponding option during dose calculcation. We also explicitly say to
-% % use the Hong Pencil Beam Algorithm
-% pln.propDoseCalc.calcLET = 0;
-% pln.propDoseCalc.engine = 'HongPB';
-% 
-% %%
-% % Now we have to set the remaining plan parameters.
-% pln.numOfFractions        = 30;
-% pln.propStf.gantryAngles  = [90 270];
-% pln.propStf.couchAngles   = [0 0];
-% pln.propStf.bixelWidth    = 5;
-% pln.propStf.numOfBeams    = numel(pln.propStf.gantryAngles);
-% pln.propStf.isoCenter     = ones(pln.propStf.numOfBeams,1) * matRad_getIsoCenter(cst,ct,0);
-% pln.propOpt.runDAO        = 0;
-% pln.propSeq.runSequencing = 0;
+% % the remaining plan parameters.
+% importer.pln.numOfFractions        = 30;
+% importer.pln.propStf.gantryAngles  = [90 270];
+% importer.pln.propStf.couchAngles   = [0 0];
+% importer.pln.propStf.bixelWidth    = 5;
+% importer.pln.propStf.numOfBeams    = numel(pln.propStf.gantryAngles);
+% importer.pln.propStf.isoCenter     = ones(pln.propStf.numOfBeams,1) * matRad_getIsoCenter(cst,ct,0);
+% importer.pln.propOpt.runDAO        = 0;
+% importer.pln.propSeq.runSequencing = 0;
 % 
 % % dose calculation settings
-% pln.propDoseCalc.doseGrid.resolution.x = 3; % [mm]
-% pln.propDoseCalc.doseGrid.resolution.y = 3; % [mm]
-% pln.propDoseCalc.doseGrid.resolution.z = 3; % [mm]
+% importer.pln.propDoseCalc.doseGrid.resolution.x = 3; % [mm]
+% importer.pln.propDoseCalc.doseGrid.resolution.y = 3; % [mm]
+% importer.pln.propDoseCalc.doseGrid.resolution.z = 3; % [mm]
 % 
 % % Optimization settings
-% pln.propOpt.quantityOpt = 'RBExDose';
+% importer.pln.propOpt.quantityOpt = 'RBExDose';
 
 
-
-
-
-
-
-
-for i = 1:length(allItems)
-    curItem = allItems(1); % i = 1
-    % 提取当前病患的pCT中全部DICOM
-    importer = matRad_DicomImporter( fullfile(source_path_of_Dicom,curItem.name,'pCT')  );
-    % fullfile(source_path_of_Dicom,curItem.name,'pCT');
-    importer.matRad_importDicom();
-    importer.matRad_createCst();
+importer = matRad_DicomImporter('E:\Workshop\autoMatRad\data\dicom_data\pt14626121st_wang_zheng_ming\1');
+importer.matRad_importDicom();
+if ~isempty(importer.ct)
     ct = importer.ct;
     cst = importer.cst;
-    save( fullfile(source_path_of_Dicom,curItem.name,'pCT','ct_cst.mat'),'ct','cst' );
-    % TODO:
-    % 检查一下代码逻辑是否正确处理单个病人的DICOM
-    % 实现为批处理
-    % 调用cst_processing.m（先改写为函数
-    % .....
-    
+    save(dest_path_of_rawMat, 'cst','ct');
+    fprintf('成功导入并保存数据到: %s\n', dest_path_of_rawMat);
+else
+    fprintf('  --> 导入失败: 未找到有效的CT或RTStruct数据。\n');
 end
+    
+
+% for i = 1:length(allItems)
+%     curItem = allItems(1); % i = 1
+%     patientDicomPath = fullfile(source_path_of_Dicom,curItem.name,'pCT'); 
+% 
+%     fprintf('--------------------------------------------------\n');
+%     fprintf('正在处理病人: %s\n', curItem.name);
+% 
+% 
+%     try
+%         % 提取当前病患的pCT中全部DICOM
+%         importer = matRad_DicomImporter(patientDicomPath);
+%         % 调用matRad_importDicom() 解析DICOM文件并填充Importer属性
+%         importer.matRad_importDicom();
+% 
+%         % 访问实例Importer属性并保存数据到.mat文件
+%         if ~isempty(importer.ct)
+%             ct = importer.ct;
+%             cst = importer.cst;
+% 
+%             save(dest_path_of_rawMat, 'cst','ct');
+%             fprintf('成功导入并保存数据到: %s\n', dest_path_of_rawMat);
+%         else
+%             fprintf('  --> 导入失败: 未找到有效的CT或RTStruct数据。\n');
+%         end
+% 
+%     catch
+%         fprintf('  --> catch a error. \n');
+%     end
+% end
 
 
 
