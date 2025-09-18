@@ -14,9 +14,18 @@ projectPath = fileparts(projectPath); % 'E:\Workshop\autoMatRad'
 %% load Dicom
 % 设置源路径和目的路径
 % 源路径存放原始Dicom文件 目的路径存放原始mat文件
-source_path_of_Dicom = 'E:\LG_PCT';
-dest_path_of_rawMat = fullfile(projectPath,"data/mat_data"); % 'E:\Workshop\autoMatRad\data\mat_data'
+path_of_Dicom = 'E:\LG_PCT';
+% path_of_rawMat = fullfile(projectPath,"data/mat_data"); % 'E:\Workshop\autoMatRad\data\mat_data'
+% path_of_rawMat = autoLoadDicom(source_path_of_Dicom,path_of_rawMat);
+path_of_rawMat = autoLoadDicom(path_of_Dicom);
 
-source_path_of_rawMat = autoLoadDicom(source_path_of_Dicom,dest_path_of_rawMat);
 
 %% process CST
+% 若需要修改 oar 和 target 仍需要进入autoProcessCST 
+% 修改expected_targets和expected_oar
+
+path_of_rawMat = fullfile(projectPath,"data/mat_data"); % 'E:\Workshop\autoMatRad\data\mat_data'
+path_of_CSTMat = fullfile(projectPath,"data/cstProcessed_data");
+path_of_CSTMat = autoProcessCST(path_of_rawMat,path_of_CSTMat);
+
+%% 
