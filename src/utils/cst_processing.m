@@ -16,11 +16,13 @@ matFiles = dir(fullfile(data, '*.mat'));
 % 定义target和oars
 expected_targets = {'ctv1','ctv'};
 expected_oar = {'body', 'brainstem',...
-    'opticnerve r','opticnerve l',...
-    'chiasm',...
-    'parotid r','parotid l'};
+    'opticnerve l','opticnerve r',...
+    'opticchiasm','chiasm'...
+    'parotid r','parotid l'};  % 7个
+numOfOAR = 7;
 
 for i = 1:length(matFiles)
+    fprintf('正在处理第 %s 个病人数据 %d \n',matFiles(i).name,i);
     filepath = fullfile(data, matFiles(i).name);
     load(filepath);
     
@@ -38,6 +40,17 @@ for i = 1:length(matFiles)
     % 取出OAR的索引
     oar_Indices = find(cellfun(@(x) any(ismember(lower(x), expected_oar)), cst(:,2)));
     
+    % 检查是否全部识别
+    if isempty(target_Indices)
+        fprintf('错误：文件 %s 未识别到任何目标靶区 (target)。\n', matFiles(i).name);
+        % 跳过当前文件的后续处理，直接进入下一个循环
+        continue;
+    end
+
+    if numel(oar_Indices) ~= numOfOAR
+         fprintf('警告：文件 %s 识别到的危及器官 (OAR) 数量不符合预期。实际数量：%d，预期数量：%d。\n', matFiles(i).name, numel(oar_Indices), numOfOAR);
+    end
+
     % 为OAR设置新的剂量约束
     for j = 1:size(oar_Indices,1)
         % 初始化oar的剂量约束 ————————————er
