@@ -8,7 +8,7 @@ function path_of_rawMat = autoLoadDicom(path_of_Dicom, path_of_rawMat)
 % call:
 %   autoLoadDicom(path_of_Dicom, path_of_rawMat); %
 %   提取path_of_Dicom中的文件，生成mat并存储到path_of_rawMat
-%   autoLoadDicom(path_of_Dicom, path_of_rawMat); % 默认存储到data/mat_data
+%   autoLoadDicom(path_of_Dicom); % 默认存储到data/mat_data
 %
 % version 1.0, written in 2025.9.17.
 % Author: Hang Lian

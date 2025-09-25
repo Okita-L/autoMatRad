@@ -44,7 +44,8 @@ function [stf,pln] = Get_matRad(inputfile_path)
                                         % MCN: McNamara-variable RBE model for protons                          WED: Wedenberg-variable RBE model for protons 
                                         % LEM: Local Effect Model for carbon ions
     % retrieve bio model parameters
-    pln.bioParam = matRad_bioModel(pln.radiationMode,quantityOpt, modelName);
+    % pln.bioParam = matRad_bioModel(pln.radiationMode,quantityOpt, modelName);
+    pln.bioParam = matRad_bioModel(pln.radiationMode, modelName);
 
     % retrieve scenarios for dose calculation and optimziation
     pln.multScen = matRad_multScen(ct,'nomScen');

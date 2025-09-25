@@ -1,42 +1,19 @@
-function path_of_CSTMat = autoProcessCST(path_of_rawMat, path_of_CSTMat)
-% AUTOPROCESSCST: automatically select oars and targets
-% input: 
-%   path_of_rawMat
-%   path_of_CSTMat
-% output:
-%   path_of_CSTMat
-% call:
-%   autoProcessCST(path_of_rawMat, path_of_CSTMat)
-%   autoProcessCST(path_of_rawMat)
-% version:ver2.0, written in 2025.9 by Ke Shi and modified by Hang Lian in
-% 2025.9.17. 
-% Authors: Ke Shi Hang Lian
+path_of_rawMat = 'E:\check';
+path_of_CSTMat = 'E:\checkRes';
 
-
-if nargin<2 % 使用默认路径
-    % 自动获取项目路径
-    projectPath = fileparts(mfilename("fullpath")); % 'E:\Workshop\autoMatRad\src\utils'
-    projectPath = fileparts(projectPath);
-    projectPath = fileparts(projectPath); % 'E:\Workshop\autoMatRad'
-    % 自动获取存放路径
-    path_of_CSTMat = fullfile(projectPath,"data/cstProcessed_data"); % 'E:\Workshop\autoMatRad\data\cstProcessed_data'
-end
-if ~exist(path_of_CSTMat,'dir')
-    mkdir(path_of_CSTMat);
-end
-
-% disp(['当前正在执行的脚本路径是: ' mfilename('fullpath')]);
-% disp(['path_of_rawMat 的值是: ' path_of_rawMat]);
+disp(['当前正在执行的脚本路径是: ' mfilename('fullpath')]);
+disp(['path_of_rawMat 的值是: ' path_of_rawMat]);
 
 % 获取所有.mat文件
 matFiles = dir(fullfile(char(path_of_rawMat), '*.mat'));
 
 % 定义target和oars
 expected_targets = {'ctv1','ctv','ctv2'};
-expected_oar = {'body', 'brainstem',...
+expected_oar = {'body','body1','body3',...
+    'brainstem',...
     'opticnerve l','opticnerve r',...
-    'opticchiasm','chiasm'...
-    'parotid r','parotid l'};  % 7个
+    'chiasm',...
+    'parotid r','parotid l'};  % 7个 不取'chiasm'
 numOfOAR = 7;
 
 for i = 1:length(matFiles)
@@ -81,7 +58,7 @@ for i = 1:length(matFiles)
          
         % 根据不同OAR设置不同参数
         switch cst{oar_Indices(j),2}
-            case 'body'
+            case {'body','body1','body3'}
                 cst{oar_Indices(j), 6}{1, 1}.parameters{1} = 55;
                 cst{oar_Indices(j), 6}{1, 1}.penalty = 1000;
             case {'parotid r', 'parotid l'} % 使用单元格数组处理多个相同情况
@@ -104,7 +81,4 @@ for i = 1:length(matFiles)
     save(newfilepath, 'cst', 'ct');
 end
 
-path_of_CSTMat = path_of_CSTMat;
-
-end
 

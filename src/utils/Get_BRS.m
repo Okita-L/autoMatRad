@@ -3,14 +3,20 @@
 % 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Add Path
-addpath(genpath('D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt'));
+addpath(genpath('E:\Workshop\autoMatRad'));
+% addpath(genpath('D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt'));
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Naming
 % 定义路径
-data = 'D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt\YourWork\data\matRad_data';
-cstPath = 'D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt\YourWork\data\cstProcessed_data';
-savePath = 'D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt\YourWork\data\BRS_data';
+% data = 'D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt\YourWork\data\matRad_data';
+% cstPath = 'D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt\YourWork\data\cstProcessed_data';
+% savePath = 'D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt\YourWork\data\BRS_data';
 
-matRad_data = dir(fullfile(data, '*_matRad.mat'));
+data = 'E:\Workshop\autoMatRad\data\matRad_data';
+cstPath = 'E:\Workshop\autoMatRad\data\cstProcessed_data';
+savePath = 'E:\Workshop\autoMatRad\data\BRS_data';
+
+matRad_data = dir(fullfile(data, '*_Stf.mat'));
+% matRad_data = dir(fullfile(data, '*_matRad.mat'));
 matFiles = dir(fullfile(cstPath, '*.mat'));
 
 

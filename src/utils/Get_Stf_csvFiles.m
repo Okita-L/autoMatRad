@@ -2,9 +2,8 @@
 % Sept. 2025. Written by KeShi.
 % 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%savePath
-savePath = 'D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt\YourWork\data\stf_csvFiles';
-stfPath = 'D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt\YourWork\data\matRad_data';
-
+savePath = 'E:\Workshop\autoMatRad\data\stf_csvFiles';
+stfPath = 'E:\Workshop\autoMatRad\data\matRad_data';
 % 获取所有子文件夹
 subfeat_folders = dir(stfPath);
 load('protons_Generic.mat','machine');
@@ -17,7 +16,7 @@ for i=3:length(subfeat_folders)
     filename = ID(1:end-7); % name
     mkdir(fullfile(savePath, filename));
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    stf_data = dir(fullfile(filePath, "*_matRad.mat"));
+    stf_data = dir(fullfile(filePath, "*_matRad.mat"));   %%% TODO: 我改了文件名 这里需要修改为"*_Stf.mat"
     stf_data_path = fullfile(filePath, stf_data.name);
     load(stf_data_path); % Load patient data
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Others.csv
@@ -63,7 +62,7 @@ for i=3:length(subfeat_folders)
         
         % 定义字段名
         raydata = [rayPos_bev, targetPoint_bev, rayPos, targetPoint, wet, energy];
-        % 定义最终存储路径
+
         filename = subfeat_folders(i).name;
         name = filename(1:end-11);
         rayfinalPath = fullfile(savePath,name,[name, '_stf',num2str(j), '.csv']);   
