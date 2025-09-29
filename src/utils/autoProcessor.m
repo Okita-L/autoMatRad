@@ -151,7 +151,7 @@ classdef autoProcessor < handle
                 % 修改硬编码即可 注意传入的参数path_of_Dicom只要求
                 % hardcode1: 
                 % patientDicomPath = fullfile(path_of_Dicom,curItem.name,'pCT'); 
-                patientDicomPath = fullfile(path_of_Dicom,curItem.name);
+                patientDicomPath = fullfile(path_of_Dicom,curItem.name)
                 
                 fprintf('--------------------------------------------------\n');
                 fprintf('正在处理病人: %s\n', curItem.name);
@@ -458,11 +458,3 @@ classdef autoProcessor < handle
 
 
 end
-
-
-
-
-
-
-
-
