@@ -9,6 +9,7 @@ classdef autoProcessor < handle
         projectPath     % 项目的根路径
         path_of_Dicom
         path_of_rawMat
+        path_of_CSTMat
     end
     
     methods
@@ -33,7 +34,7 @@ classdef autoProcessor < handle
             
             
             % 确保所有输出目录都存在
-            obj.ensureDirectories(); % ? 
+            % obj.ensureDirectories(); % TODO
         end
         
         
@@ -106,7 +107,6 @@ classdef autoProcessor < handle
             obj.path_of_rawMat = path_of_rawMat;
         end
 
-        
         function autoLoadDicomBatch(obj,path_of_Dicom,path_of_rawMat)
             % AUTOLOADDICOMBATCH: 将DICOM文件加载并转换为mat格式
             %   这个方法遍历指定路径下每个病人的DICOM文件，并转换为matRad所需的结构体
@@ -193,7 +193,246 @@ classdef autoProcessor < handle
             obj.path_of_rawMat = path_of_rawMat;
             
         end
+        
+        function autoProcessCST(obj, OARs, Targets, path_of_rawMat, path_of_CSTMat)
+            % 方法实现自动筛选OAR和Target，并完成基础参数设置
+            % input: 
+            %   obj 
+            % OARs    - (N x 2 CELL) 危及器官及约束条件的定义列表。
+            %             - 第 1 列: (STRING ARRAY) 别名列表。例如: ["Lung_R", "RLung"]。
+            %             - 第 2 列: (STRUCT ARRAY) 约束条件列表。
+            %               每个结构体必须包含以下字段:
+            %               1. .className  (STRING): 约束类型, 如 "MaxDose"。
+            %               2. .parameters (CELL): 参数值, 包含数字数组, 如 {5, [10, 20]}。
+            %               3. .penalty    (DOUBLE): 惩罚系数或权重 (标量)。 
+            %   Targets
+            %   path_of_rawMat
+            %   path_of_CSTMat
+            % output:
+            %   
+            % call:
+            %   autoProcessCST(OARs, Targets, path_of_rawMat, path_of_CSTMat)
+            %   autoProcessCST(OARs, Targets, path_of_rawMat)
+            %   autoProcessCST(OARs, Targets)
 
+            %% 验证参数
+            arguments
+                obj;
+                % 期望结构
+                % targets = ["ctv1", "ctv", "ctv2";  % 第一行代表一个目标，有 3 个可能的名称
+                % "gvt",  "gvt-p", ""    % 第二行代表另一个目标，有 2 个可能的名称
+                % ];
+                % OARs { [字符串数组], constraints struct ;
+                %           }
+                % Targets 必须是字符串数组，且至少有一行（非空）
+
+                OARs (:, 2) cell {mustBeValidOARsStructure}
+                Targets {mustBeA(Targets, 'string'), mustBeNonEmpty}
+                path_of_rawMat {mustBeTextOrEmpty} = [];
+                path_of_CSTMat {mustBeTextOrEmpty} = [];
+            end
+            
+            
+            %% 输出Target和OARs信息
+            fprintf('Targets (%d个) 和 OARs (%d个) 列表验证成功。\n', numel(Targets), numel(OARs));
+            fprintf('Targets: %s\n', strjoin(Targets, ', '));
+            fprintf('OARs:    %s\n', strjoin(OARs, ', '));
+
+            %% 路径参数设置与验证
+            if isempty(path_of_rawMat)
+                if ~isempty(obj.path_of_rawMat)
+                    path_of_rawMat = obj.path_of_rawMat;
+                else
+                    fprintf("Damn!----导入失败: 无法找到原始 Mat 文件位置\n" + ...
+                        "         因为传入路径为空\n");
+                    return;
+                end
+
+            end
+            
+            if isempty(path_of_CSTMat)
+                if ~isempty(obj.path_of_CSTMat)
+                    path_of_CSTMat = obj.path_of_CSTMat;
+                else
+                    path_of_CSTMat = fullfile(obj.projectPath,"data/cstProcessed_data");
+                end
+            end
+
+            if ~exist(path_of_CSTMat, 'dir')
+                mkdir(path_of_CSTMat);
+            end
+            
+            %% 获取所有.mat文件
+            matFiles = dir(fullfile(char(path_of_rawMat), '*.mat'));
+            if isempty(matFiles)
+                fprintf('Ops! ----路径 %s 下无 mat 文件', path_of_rawMat);
+                return;
+            end
+
+            %% 识别并处理OARS和Targets
+            for i=1:numel(matFiles)
+                
+                %% 导入单个mat
+                fprintf('Wait!----正在处理第 %d 个病人数据 %s \n',matFiles(i).name,i);
+                curFilepath = fullfile(path_of_rawMat, matFiles(i).name);
+                try
+                    load(char(curFilepath),'cst','-mat');
+                catch ME
+                    fprintf(['Damn!----无法加载文件 %s \n' ...
+                        '         错误信息: %s\n'], matFiles(i).name, ME.message);
+                    continue; % 跳到下一个文件
+                end
+
+                %% 获取所需区域索引
+                targetIndex = getTargetIndex(Targets, cst(:, 1: 3));
+                oarsIndices = getOARsIndices(OARs,cst(:,1:3)); % cst中索引 OARs中索引
+
+                %% 判断ROI数量是否合法
+                if isempty(targetIndex)
+                    fprintf('Damn!----未识别 Target \n'+...
+                        '         请检查患者 %s 的 Targets 命名是否符合规范',matFiles(i).name);
+                    continue;
+                end
+                if numel(oarsIndices)~=size(OARs,1) || numel(oarsIndices) == 0
+                    fprintf('Ops! ----已识别 OAR 总数不符合要求\n'+...
+                        '         请检查患者 %s 的 OARs 命名是否符合规范',matFiles(i).name);
+                    continue;
+                end
+                
+                %% 清除不关注的target的约束条件
+                % tRows = ismember(cst(:, 3), {'TARGET'});
+                % rowsToBeIgnored = tRows & ~targetIndex;
+                % cst{rowsToBeIgnored, 6} = [];
+                % oars也清除 更快更安全
+                cst{~targetIndex, 6} = [];
+
+                %% 初始化所需OARs的约束条件
+                % cell array 多行赋值用()
+                % 单行用{}
+                % OARs{}提取对应结构体数组
+                cst(oarsIndices{1},6) = {OARs{oarsIndices{2},2}};
+                
+         
+               
+                
+
+
+
+
+            end
+
+
+
+            
+        end
+
+            
+          
+
+
+        function index = getTargetIndex(Targets, cstSubset)
+            % GETTARGETINDEX: 取得唯一Target在cst中的索引
+            % input:
+            %
+            % output:
+            %
+            % call:
+            
+            %% 
+            arguments
+                Targets (:,:) string {mustBeNonEmpty} % Targets 是多行字符串数组
+                cstSubset (:, 3) cell {mustBeNonEmpty} % 验证：必须是非空的元胞数组，且只有两列
+            end
+            %% 确保小写&清除空字符串
+            Targets = lower(Targets(Targets ~= ""));
+            targetAliases = cellstr(Targets);
+            
+
+            % cst{:,3} 返回元胞数组 strcmp无法处理
+                % tRows = strcmp(cst_subset{:,2}, 'TARGET');
+                % tRowsNames = lower(cst_subset{tRows,2});
+                % tRowsIgnore = ~ismember(tRowsNames,);
+
+
+
+        end
+
+        function indices = getOARsIndices(OARs, cstSubset)
+
+            OARs = lower(OARs(OARs ~= ""));
+            oarsAliases = cellstr(Oars);
+
+        end
+
+        function mustBeTextOrEmpty(x)
+        % MUSTBETEXTOREMPTY
+            if ~isempty(x)
+                % 检查它是否是有效的文本格式
+                mustBeText(x); 
+            end
+        end
+
+        function mustBeValidOARsStructure(OARs)
+            % MUSTBEVALIDOARSSTRUCTURE: 自定义验证函数,检查 OARs 的第二列结构体格式
+            % 遍历 OARs 的每一行
+            for i = 1:size(OARs, 1)
+                
+                % --- 验证第一列：必须是非空的字符串数组 ---
+                oarAliases = OARs{i, 1};
+                if ~isstring(oarAliases) || isempty(oarAliases)
+                    error('Custom:InvalidOARs', ...
+                        'OARs 数组第 %d 行的第 1 列必须是非空的字符串数组', i);
+                end
+                
+                
+                % --- 验证第二列：结构体数组及其内部格式 ---
+                
+                constraintArray = OARs{i, 2};
+                
+                % 1. 验证第二列：必须是结构体数组，且不能是空数组
+                if ~isstruct(constraintArray) || isempty(constraintArray)
+                    error('Custom:InvalidOARs', ...
+                        'OARs 数组第 %d 行的第 2 列必须是非空的结构体数组', i);
+                end
+                
+                % 2. 遍历结构体数组中的每一个约束元素
+                for j = 1:numel(constraintArray)
+                    currentConstraint = constraintArray(j); % 提取当前的约束结构体 (struct)
+        
+                    % 检查字段名是否存在
+                    requiredFields = {'className', 'parameters', 'penalty'};
+                    if ~all(isfield(currentConstraint, requiredFields))
+                        error('Custom:InvalidOARs', ...
+                            'OARs 数组第 %d 行, 约束 %d 缺少必需的字段: className, parameters, 或 penalty', i, j);
+                    end
+                    
+                    % 验证 .className 字段：必须是单个字符串
+                    if ~isstring(currentConstraint.className) || numel(currentConstraint.className) ~= 1
+                        error('Custom:InvalidOARs', ...
+                            'OARs 数组第 %d 行, 约束 %d 的 className 必须是单个字符串.', i, j);
+                    end
+                    
+                    % 验证 .parameters 字段：必须是元胞数组 (cell)
+                    if ~iscell(currentConstraint.parameters)
+                        error('Custom:InvalidOARs', ...
+                            'OARs 数组第 %d 行, 约束 %d 的 parameters 必须是元胞数组.', i, j);
+                    end
+                    
+                    % 验证 .penalty 字段：必须是单个数字
+                    if ~isnumeric(currentConstraint.penalty) || numel(currentConstraint.penalty) ~= 1
+                        error('Custom:InvalidOARs', ...
+                            'OARs 数组第 %d 行, 约束 %d 的 penalty 必须是单个数字.', i, j);
+                    end
+                end
+            end
+            
+        end
+        
+            
+
+    end
+
+        
 
 
 
@@ -201,14 +440,11 @@ classdef autoProcessor < handle
 
 
         
-        path_of_CSTMat = autoProcessCST(path_of_rawMat);
-        path_of_STFMat = autoGenerateSTF(path_ofCSTMat);
 
 
 
 
-
-    end
+        
 
 
 
@@ -216,4 +452,11 @@ classdef autoProcessor < handle
 
 
 end
+
+
+
+
+
+
+
 

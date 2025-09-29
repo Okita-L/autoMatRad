@@ -6,11 +6,14 @@
 %% addpath in to local workspace
 % addpath(genpath('D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt'));
 
+addpath(genpath('E:\Workshop\autoMatRad'));
 %% 设置输入输出文件的路径
 % 设置包含.mat文件的文件夹路径
-input_folder = "E:\Workshop\autoMatRad\data\cstProcessed_data";
+% input_folder = "E:\Workshop\autoMatRad\data\cstProcessed_data";
+input_folder = 'E:\AllDataOfPt14626121\cstprocessed_data';
 % 设置输出文件夹路径
-output_folder = "E:\Workshop\autoMatRad\data\matRadOld_data";
+% output_folder = "E:\Workshop\autoMatRad\data\matRadOld_data";
+output_folder = 'E:\AllDataOfPt14626121\matRad_data';
 
 %% 获取所有病例的mat文件
 matfiles = dir(fullfile(input_folder, '*.mat'));

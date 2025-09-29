@@ -56,3 +56,12 @@ path_of_STFMat = autoGenerateSTF(path_of_CSTMat);
 
 %% generate DJI
 path_of_DIJ = autoGenerateSTF(path_of_)
+
+
+%% test
+projectPath = 'E:\Workshop\autoMatRad';
+load('E:\Workshop\autoMatRad\data\mat_data\60-PT3169277.mat')
+
+% cst(:,3)
+
+cst{:,3}

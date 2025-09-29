@@ -11,9 +11,14 @@ addpath(genpath('E:\Workshop\autoMatRad'));
 % cstPath = 'D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt\YourWork\data\cstProcessed_data';
 % savePath = 'D:\Sk-work\ShiKe\reasearch-Work\MyWorkForMedical\For_LH\matRad-RBErobOpt\YourWork\data\BRS_data';
 
-data = 'E:\Workshop\autoMatRad\data\matRad_data';
-cstPath = 'E:\Workshop\autoMatRad\data\cstProcessed_data';
-savePath = 'E:\Workshop\autoMatRad\data\BRS_data';
+data = 'C:\Users\Administrator\Desktop\stf5'; % 存放matRad_data的路径
+cstPath = 'C:\Users\Administrator\Desktop\cst5'; % 存放cstProcessed_data的路径
+savePath = 'C:\Users\Administrator\Desktop\brs5'; % 存放brs结果的路径
+
+
+% data = 'E:\Workshop\autoMatRad\data\matRad_data';
+% cstPath = 'E:\Workshop\autoMatRad\data\cstProcessed_data';
+% savePath = 'E:\Workshop\autoMatRad\data\BRS_data';
 
 matRad_data = dir(fullfile(data, '*_Stf.mat'));
 % matRad_data = dir(fullfile(data, '*_matRad.mat'));
@@ -21,20 +26,27 @@ matFiles = dir(fullfile(cstPath, '*.mat'));
 
 
 %遍历所有mat文件
-for count = 1:length(matRad_data)
+for count = 1:numel(matRad_data)
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Naming
     try
-        filePath = fullfile(data, matRad_data(count).name);
-        [~, ID, ~] = fileparts(matRad_data(count).name);% ID name
-        filename = ID(1:end-7); % name
+        
+        [~, stfName, ~] = fileparts(matRad_data(count).name);% ID name
+        filename = stfName(1:end-4); % name
+        
         mkdir(fullfile(savePath, filename));
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        matRad_data = dir(fullfile(filePath, "*_matRad.mat"));
-        matRad_data_path = fullfile(filePath, matRad_data.name);
-        load(matRad_data_path); % Load patient data for pln&stf
+        cur_matRad_data = matRad_data(count);
+        cur_matRad_data_path = fullfile(matRad_data(count).folder,stfName);
+        load(cur_matRad_data_path); % Load patient data for pln&stf
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        cst_filePath = fullfile(cstPath, matFiles(count).name);
+        cstFileName = [filename, '.mat']; % CST 文件名就是 'PatientID.mat'
+        cst_filePath = fullfile(cstPath, cstFileName);
+        if ~exist(cst_filePath, 'file')
+            warning('Skipping %s: Matching CST file "%s" not found in %s.', ...
+                    stfName, cstFileName, cstPath);
+            continue;
+        end
         load(cst_filePath);
         
         dij = matRad_calcParticleDose(ct,stf,pln,cst);
@@ -49,7 +61,7 @@ for count = 1:length(matRad_data)
         
         resultGUI = matRad_fluenceOptimization(dij,cst,pln);
         
-        origin_BRS = Determine_origin(new_cst,dij,stf,resultGUI, ID);
+        origin_BRS = Determine_origin(new_cst,dij,stf,resultGUI, stfName);
         
      %% Save files
 %         BRS_filename = [filename '_BRS.mat'];
