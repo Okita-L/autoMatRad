@@ -21,7 +21,7 @@ classdef autoProcessor < handle
 
             %  构造函数：在创建对象时初始化路径
             if nargin > 0
-                obj.projectPath = projectRootPath;
+                obj.projectPath = projectPath;
             else
                 % 如果没有提供路径，自动推断
                 obj.projectPath = fileparts(mfilename('fullpath')); % 'E:\Workshop\autoMatRad\src\utils'
@@ -150,7 +150,8 @@ classdef autoProcessor < handle
                 % 具体实现不免过于繁琐 也难以适应所心所欲的数据集格式
                 % 修改硬编码即可 注意传入的参数path_of_Dicom只要求
                 % hardcode1: 
-                patientDicomPath = fullfile(path_of_Dicom,curItem.name,'pCT'); 
+                % patientDicomPath = fullfile(path_of_Dicom,curItem.name,'pCT'); 
+                patientDicomPath = fullfile(path_of_Dicom,curItem.name);
                 
                 fprintf('--------------------------------------------------\n');
                 fprintf('正在处理病人: %s\n', curItem.name);
