@@ -65,7 +65,7 @@ classdef autoProcessor < handle
                 path_of_rawMat = fullfile(obj.projectPath,"data/mat_data");
             end
 
-            % 检查文件夹是否存在
+            %% 检查文件夹是否存在
             if ~exist(path_of_Dicom,'dir') % 2个参数的exist更快
                 error('Damn!----输入DICOM文件夹不存在或不是一个文件夹: %s', path_of_Dicom)
             else
@@ -75,18 +75,19 @@ classdef autoProcessor < handle
                 mkdir(path_of_rawMat);
             end
             
-            % 检查文件可用性
+            %% 检查文件可用性
             allDicoms = dir(fullfile(path_of_Dicom, '*.dcm'));
             if isempty(allDicoms)
                 warning('Ops !----在文件夹 %s 中没有找到任何 .dcm 文件 导入终止\n', path_of_Dicom)
                 obj.path_of_rawMat = '';
                 return;
             end
-            
+               
+            %%
             % 调用matRad的matRad_DicomImporter类实现导入
             importer = matRad_DicomImporter(path_of_Dicom);
             % 清空 RTPlan 文件的导入列表
-            importer.importFiles.replan = [];
+            importer.importFiles.rtplan = [];
             % 调用matRad_importDicom() 解析DICOM文件并填充Importer属性
             importer.matRad_importDicom();
             % 访问实例Importer属性并保存数据到.mat文件
@@ -285,7 +286,7 @@ classdef autoProcessor < handle
 
                 %% 获取所需区域索引
                 targetIndex = getTargetIndex(Targets, cst(:, 1: 3));
-                oarsIndices = getOARsIndices(OARs,cst(:,1:3)); % cst中索引 OARs中索引
+                oarsIndices = getOARsIndices(OARs,cst(:,1:3)); % cst中索引 OARs中索引. oarsIndices数值数组
 
                 %% 判断ROI数量是否合法
                 if isempty(targetIndex)
@@ -310,7 +311,11 @@ classdef autoProcessor < handle
                 % cell array 多行赋值用()
                 % 单行用{}
                 % OARs{}提取对应结构体数组
-                cst(oarsIndices{1},6) = {OARs{oarsIndices{2},2}};
+                for j=1:numel(oarsIndices)
+                    cst(oarsIndices(:,1),6) = OARs(oarsIndices(:,2));
+                        
+                end
+                cst(oarsIndices,6) = {OARs{oarsIndices{2},2}};
                 
          
                
