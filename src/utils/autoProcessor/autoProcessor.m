@@ -7,9 +7,13 @@ classdef autoProcessor < handle
     
     properties
         projectPath     % 项目的根路径
-        path_of_Dicom
+        path_of_Dicom % 不应该是一个类属性吧
         path_of_rawMat
         path_of_CSTMat
+        path_of_STFMat
+        path_of_DVH_QI
+        path_of_STFCSV
+        path_of_OrgCSV
     end
     
     methods
@@ -28,16 +32,21 @@ classdef autoProcessor < handle
                 obj.projectPath = fileparts(obj.projectPath); % 'E:\Workshop\autoMatRad\src'
                 obj.projectPath = fileparts(obj.projectPath); % 'E:\Workshop\autoMatRad'
             end
-            disp(projectPath);
+            fprintf('projectPath now is %s',projectPath);
 
-            % 设置各个阶段的路径
-            
+            % 设置各个阶段的路径默认值
+            path_of_Dicom  = fullfile(obj.projectPath,'data\dicom_data');
+            path_of_rawMat = fullfile(obj.projectPath,'data\rawMat_data'); % mat_data
+            path_of_CSTMat = fullfile(obj.projectPath,'data\CSTMat_data'); % cstProcessed_data
+            path_of_STFMat = fullfile(obj.projectPath,'data\STFMat_data'); % matRad_data
+            path_of_DVH_QI = fullfile(obj.projectPath,'data\DVH_QI_data'); % dvh_qi_data
+            path_of_STFCSV = fullfile(obj.projectPath,'data\STFCSV_file'); % stf_csvFiles
+            path_of_OrgCSV = fullfile(obj.projectPath,'data\OrgCSV_file'); % 将包括BRS_data等各个器官的矩阵
             
             % 确保所有输出目录都存在
             % obj.ensureDirectories(); % TODO
         end
-        
-        
+         
     end
 
     methods
@@ -151,7 +160,7 @@ classdef autoProcessor < handle
                 % 修改硬编码即可 注意传入的参数path_of_Dicom只要求
                 % hardcode1: 
                 % patientDicomPath = fullfile(path_of_Dicom,curItem.name,'pCT'); 
-                patientDicomPath = fullfile(path_of_Dicom,curItem.name)
+                patientDicomPath = fullfile(path_of_Dicom,curItem.name);
                 
                 fprintf('--------------------------------------------------\n');
                 fprintf('正在处理病人: %s\n', curItem.name);
@@ -510,7 +519,7 @@ classdef autoProcessor < handle
                     % 验证 .className 字段：必须是单个字符串 
                     % char vector/ string array/ "" 空字符串
                     % if ~isstring(currentConstraint.className) || numel(currentConstraint.className) ~= 1
-                    if ~( (isstring(currentConstraint.className) && numel(currentConstraint.className) == 1) || ...
+                    if ~( (isstring(currentConstraint.className) && isscalar(currentConstraint.className)) || ...
                         (ischar(currentConstraint.className) && isrow(currentConstraint.className)) )
  
                         error('Custom:InvalidOARs', ...
