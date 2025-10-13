@@ -6,6 +6,7 @@ classdef autoProcessor < handle
     % version: 1.0  
     
     properties
+        % path
         projectPath     % 项目的根路径
         path_of_Dicom % 不应该是一个类属性吧
         path_of_rawMat
@@ -13,44 +14,114 @@ classdef autoProcessor < handle
         path_of_STFMat
         path_of_DVH_QI
         path_of_STFCSV
+        path_of_DIJMat
+        path_of_resultGUI
         path_of_OrgCSV
+        
+
+        % pln
+        pln
     end
     
+    % 构造函数
     methods
+
         function obj = autoProcessor(projectPath)
             % AUTOPROCESSOR 构造此类的实例
             % input:
             % output:
             % call:
 
-            %  构造函数：在创建对象时初始化路径
-            if nargin > 0
-                obj.projectPath = projectPath;
-            else
-                % 如果没有提供路径，自动推断
-                obj.projectPath = fileparts(mfilename('fullpath')); % 'E:\Workshop\autoMatRad\src\utils'
+            %% 参数验证
+            arguments 
+                projectPath {autoProcessor.mustBeTextOrEmpty} = [];
+            end
+            %% 初始化matRad
+            try 
+                matRad_rc;
+            catch
+                disp('Damn!----MatRad配置错误');
+                disp('         请检查是否包含了MatRad子模块或设置了路径。');
+            end
+
+            %% 初始化projectPath
+            if isempty(projectPath)
+                obj.projectPath = fileparts(mfilename('fullpath')); % 'E:\Workshop\autoMatRad\src\utils\autoProcessor'
+                obj.projectPath = fileparts(obj.projectPath); % 'E:\Workshop\autoMatRad\src\utils'
                 obj.projectPath = fileparts(obj.projectPath); % 'E:\Workshop\autoMatRad\src'
                 obj.projectPath = fileparts(obj.projectPath); % 'E:\Workshop\autoMatRad'
+            else
+                obj.projectPath = projectPath;
             end
-            fprintf('projectPath now is %s',projectPath);
+            fprintf('projectPath now is %s\n',obj.projectPath);
 
-            % 设置各个阶段的路径默认值
-            path_of_Dicom  = fullfile(obj.projectPath,'data\dicom_data');
-            path_of_rawMat = fullfile(obj.projectPath,'data\rawMat_data'); % mat_data
-            path_of_CSTMat = fullfile(obj.projectPath,'data\CSTMat_data'); % cstProcessed_data
-            path_of_STFMat = fullfile(obj.projectPath,'data\STFMat_data'); % matRad_data
-            path_of_DVH_QI = fullfile(obj.projectPath,'data\DVH_QI_data'); % dvh_qi_data
-            path_of_STFCSV = fullfile(obj.projectPath,'data\STFCSV_file'); % stf_csvFiles
-            path_of_OrgCSV = fullfile(obj.projectPath,'data\OrgCSV_file'); % 将包括BRS_data等各个器官的矩阵
+            %% 初始化默认pln设置
+            obj.pln.radiationMode = 'protons';            
+            obj.pln.machine       = 'Generic';
+
+            % for particles it is possible to also calculate the LET disutribution
+            % alongside the physical dose. Therefore you need to activate the
+            % corresponding option during dose calculcation
+            obj.pln.propDoseCalc.calcLET = 0;
+
+            obj.pln.numOfFractions        = 30;
+            obj.pln.propStf.gantryAngles  = 0:5:359;
+            numAngles = length(obj.pln.propStf.gantryAngles);
+            obj.pln.propStf.couchAngles = zeros(1, numAngles);
+            obj.pln.propStf.bixelWidth    = 5;
+            obj.pln.propStf.numOfBeams    = numel(obj.pln.propStf.gantryAngles);
+            obj.pln.propOpt.runDAO        = 0;
+            obj.pln.propOpt.runSequencing = 0;
+
+            % isoCenter在generateSTF时赋值
+            % pln.propStf.isoCenter     = ones(pln.propStf.numOfBeams,1) * matRad_getIsoCenter(cst,ct,0);
+            obj.pln.propStf.isoCenter = [];
+            % multScen 同理
+            % pln.multScen = matRad_multScen(ct,'nomScen');
+            obj.pln.multScen = struct();
+
+            % 用的最新版的matRad model = matRad_bioModel(sRadiationMode, sModel)
+            obj.pln.bioParam = matRad_bioModel(obj.pln.radiationMode, 'constRBE');
+            % 旧版为matRad_bioModel(pln.radiationMode,quantityOpt, modelName);
+            % quantityOpt   = 'RBExD';
+            % modelName     = 'constRBE';   
+            % pln.bioParam = matRad_bioModel(pln.radiationMode, modelName);
+            obj.pln.propOpt.quantityOpt = 'RBExD'; % 新版matRad在这里设置该参数
+
+            % dose calculation settings
+            obj.pln.propDoseCalc.doseGrid.resolution.x = 5; % [mm]
+            obj.pln.propDoseCalc.doseGrid.resolution.y = 5; % [mm]
+            obj.pln.propDoseCalc.doseGrid.resolution.z = 5; % [mm]
+
             
-            % 确保所有输出目录都存在
-            % obj.ensureDirectories(); % TODO
+            %% 设置各个阶段的路径默认值
+            obj.path_of_Dicom  = fullfile(obj.projectPath,'data','dicom_data');
+            obj.path_of_rawMat = fullfile(obj.projectPath,'data','rawMat_data'); % mat_data
+            obj.path_of_CSTMat = fullfile(obj.projectPath,'data','CSTMat_data'); % cstProcessed_data
+            obj.path_of_STFMat = fullfile(obj.projectPath,'data','STFMat_data'); % matRad_data
+            obj.path_of_DVH_QI = fullfile(obj.projectPath,'data','DVH_QI_data'); % dvh_qi_data
+            obj.path_of_STFCSV = fullfile(obj.projectPath,'data','STFCSV_file'); % stf_csvFiles
+            obj.path_of_DIJMat = fullfile(obj.projectPath,'data','DIJMat_data');
+            obj.path_of_resultGUI = fullfile(obj.projectPath,'data','resultGUI_data');
+            obj.path_of_OrgCSV = fullfile(obj.projectPath,'data','OrgCSV_file'); % 将包括BRS_data等各个器官的矩阵
+            
+            pathsToCreate = {obj.path_of_rawMat, obj.path_of_CSTMat, obj.path_of_STFMat, ...
+                 obj.path_of_DVH_QI, obj.path_of_STFCSV, obj.path_of_DIJMat, obj.path_of_OrgCSV};
+
+            for k = 1:numel(pathsToCreate)
+                if ~exist(pathsToCreate{k},'dir')
+                    mkdir(pathsToCreate{k});
+                end
+            end
+
         end
          
     end
 
+
+    % 主流程方法
     methods
-        % 主流程方法
+        
         % 以下方法均支持自定义存储路径
         % 修改方法：将目标路径作为第二个参数传入
 
@@ -72,7 +143,7 @@ classdef autoProcessor < handle
             %   autoLoadDicomSingle(path_of_Dicom);                   % 默认存储到data/mat_data
             
             if nargin<3 % 使用默认路径
-                path_of_rawMat = fullfile(obj.projectPath,"data/mat_data");
+                path_of_rawMat = obj.path_of_rawMat;
             end
 
             % 检查文件夹是否存在
@@ -140,7 +211,7 @@ classdef autoProcessor < handle
             %   autoLoadDicomBatch(path_of_Dicom, path_of_rawMat);   % 存储到指定路径
             %   autoLoadDicomBatch(path_of_Dicom);                   % 默认存储到data/mat_data 
             if nargin<3 % 使用默认路径
-                path_of_rawMat = fullfile(obj.projectPath,"data/mat_data"); % 'E:\Workshop\autoMatRad\data\mat_data'
+                path_of_rawMat = obj.path_of_rawMat; % 'E:\Workshop\autoMatRad\data\rawMat_data'
             end
             if ~exist(path_of_rawMat,'dir')
                 mkdir(path_of_rawMat);
@@ -254,7 +325,7 @@ classdef autoProcessor < handle
                 if ~isempty(obj.path_of_CSTMat)
                     path_of_CSTMat = obj.path_of_CSTMat;
                 else
-                    path_of_CSTMat = fullfile(obj.projectPath,"data/cstProcessed_data");
+                    path_of_CSTMat = fullfile(obj.projectPath,"data/CSTMat_data");
                 end
             end
 
@@ -270,7 +341,7 @@ classdef autoProcessor < handle
             end
 
             %% 识别并处理OARS和Targets
-            for i=1:1%numel(matFiles)
+            for i=1:numel(matFiles)
                 %% 导入单个mat
                 fprintf('Wait!----正在处理第 %d 个病人数据 %s \n',i,matFiles(i).name);
                 curFilepath = fullfile(path_of_rawMat, matFiles(i).name);
@@ -278,7 +349,7 @@ classdef autoProcessor < handle
                     load(char(curFilepath),'cst','-mat');
                 catch ME
                     fprintf(['Damn!----无法加载文件 %s \n' ...
-                        '         错误信息: %s\n'], matFiles(i).name, ME.message);
+                        '错误信息: %s\n'], matFiles(i).name, ME.message);
                     continue; % 跳到下一个文件
                 end
 
@@ -331,11 +402,280 @@ classdef autoProcessor < handle
             end
         end
         
-     
-    end
+        function autoGenerateSTF(obj, path_of_CSTMat, path_of_SFTMat)
+            % AUTOGENERATESTF 根据CST生成原始的STF和PLN的matRad格式数据
+            % input:
+            %   obj
+            %   path_of_CSTMat
+            %   path_of_SFTMat
+            %
+            % Authors: Ke Shi, Hang Lian
+            % Get_matRad_All.m -- BY SK
+            
+            %% 参数验证
+            arguments
+                obj;
+                path_of_CSTMat {autoProcessor.mustBeTextOrEmpty} = [];
+                path_of_SFTMat {autoProcessor.mustBeTextOrEmpty} = [];
+            end
+            
+            %% 路径参数设置与验证
+            if isempty(path_of_CSTMat)
+                if ~isempty(obj.path_of_CSTMat)
+                    path_of_CSTMat = obj.path_of_CSTMat;
+                else
+                    fprintf("Damn!----生成失败: 无法找到原始 CSTMat 文件位置\n" + ...
+                        "         因为传入路径为空\n");
+                    return;
+                end
+            end
 
+            if isempty(path_of_SFTMat)
+                if ~isempty(obj.path_of_STFMat)
+                    path_of_SFTMat = obj.path_of_STFMat;
+                else
+                    path_of_SFTMat = fullfile(obj.projectPath,'data','STFMat_data');
+                end
+            end
+
+            if ~exist(path_of_SFTMat,'dir')
+                mkdir(path_of_SFTMat)
+            end
+
+            %% 获取所有CSTMat文件
+            matFiles = dir(fullfile(char(path_of_CSTMat), '*.mat'));
+            if isempty(matFiles)
+                fprintf('Ops! ----路径 %s 下无 mat 文件\n', path_of_CSTMat);
+                return;
+            end
+            
+            %% 批处理计算STF结构
+            for i=1:numel(matFiles)
+                %% 导入单个mat
+                fprintf('Wait!----正在处理第 %d 个病人数据 %s \n',i,matFiles(i).name);
+                curFilepath = fullfile(path_of_CSTMat, matFiles(i).name);
+
+                %% 生成SFT PLN
+                try
+                    % [stf,pln] = GenerateSigleSTF(obj, pln, path_of_CurCSTMat)
+                    [stf,pln] = obj.GenerateSigleSTF(curFilepath);
+                catch ME
+                    fprintf(['Damn!----%s 路径验证失败\n' ...
+                        '         错误信息: %s\n'], matFiles(i).name, ME.message);
+                    continue;
+                end
+
+                %% 将stf存入指定路径
+                % [~,filename, ext] = fileparts(matFiles(i).name);
+                [~,filename, ~] = fileparts(matFiles(i).name);
+                stf_filename = [filename '_Stf.mat'];
+                curSavepath = fullfile(path_of_SFTMat,stf_filename);
+
+                %% !!! 检查点 2: 在函数内部确认值已存在 !!!
+                % if isempty(pln.multScen)
+                %     fprintf('Debug: multScen 在赋值后立即为空！\n');
+                % else
+                %     % 获取结构体数组的元素数量 (N)
+                %     num_scenarios = numel(pln.multScen);
+                % 
+                %     fprintf('Debug: multScen 赋值成功，总共包含 %d 个不确定性场景。\n', num_scenarios);
+                % 
+                %     % 获取字段名列表
+                %     meta_fields = fieldnames(pln.multScen);
+                % 
+                %     % ----------------------------------------------------
+                %     % 外部循环：遍历结构体数组的每一个元素 (即每一个不确定性场景)
+                %     % ----------------------------------------------------
+                %     for i = 1:num_scenarios
+                %         fprintf('\n========================================\n');
+                %         fprintf('--- 场景编号 %d / %d (pln.multScen(%d)) 详细内容 ---\n', i, num_scenarios, i);
+                %         fprintf('========================================\n');
+                % 
+                %         % 内部循环：遍历当前元素的每一个字段
+                %         for k = 1:numel(meta_fields)
+                %             fieldName = meta_fields{k};
+                % 
+                %             % 访问当前元素 (i) 的当前字段 (fieldName) 的值
+                %             value = pln.multScen(i).(fieldName);
+                % 
+                %             fprintf('%s:\n', fieldName);
+                % 
+                %             % 使用 disp 打印值，即使值是空数组或复杂数组
+                %             disp(value); 
+                %         end
+                %     end
+                % end
+
+                %% 
+                save(curSavepath,'stf','pln', '-v7');
+                
+            end
+
+        end
+        
+        function autoGenerateDIJandResultGUI(obj, path_of_CSTMat, path_of_STFMat, path_of_DIJMat, path_of_resultGUI)
+            
+            %% 参数验证
+            arguments
+                obj 
+                path_of_CSTMat {autoProcessor.mustBeTextOrEmpty} = ''; % 用 ''更好
+                path_of_STFMat {autoProcessor.mustBeTextOrEmpty} = '';
+                path_of_DIJMat {autoProcessor.mustBeTextOrEmpty} = '';
+                path_of_resultGUI {autoProcessor.mustBeTextOrEmpty} = '';
+            end
+
+            if isempty(path_of_CSTMat)
+                if ~isempty(obj.path_of_CSTMat)
+                    path_of_CSTMat = obj.path_of_CSTMat;
+                else
+                    fprintf("Damn!----导入失败: 无法找到原始 CSTMat 文件位置\n" + ...
+                        "         因为传入路径为空\n");
+                    return;
+                end
+            end
+
+            if isempty(path_of_STFMat)
+                if ~isempty(obj.path_of_STFMat)
+                    path_of_STFMat = obj.path_of_STFMat;
+                else
+                    fprintf("Damn!----导入失败: 无法找到原始 STFMat 文件位置\n" + ...
+                        "         因为传入路径为空\n");
+                    return;
+                end
+            end
+
+            if isempty(path_of_DIJMat)
+                if ~isempty(obj.path_of_DIJMat)
+                    path_of_DIJMat = obj.path_of_DIJMat;
+                end
+            end
+            if ~exist(path_of_DIJMat, 'dir')
+                mkdir(path_of_DIJMat);
+            end
+
+            if isempty(path_of_resultGUI)
+                if ~isempty(obj.path_of_resultGUI)
+                    path_of_resultGUI = obj.path_of_resultGUI;
+                end
+            end
+            if ~exist(path_of_resultGUI, 'dir')
+                mkdir(path_of_resultGUI);
+            end
+
+            %% matRad_rc
+            matRad_rc;
+
+            %% 获取文件信息
+            % CSTMatFiles = dir(fullfile(path_of_CSTMat,'*.mat'));
+            STFMatFiles = dir(fullfile(path_of_STFMat,'*_Stf.mat'));
+            if isempty(STFMatFiles)
+                fprintf('Warning: 在 %s 中没有找到匹配的 STF 文件。\n', path_of_STFMat);
+                return;
+            end
+
+            %% 批处理生成DIJ
+            for i=1:numel(STFMatFiles)
+                %% 加载STF PLN CST CT
+                % 预先清除 dij，防止数据污染
+                if exist('dij','var'); clear dij; end 
+
+                curSTFMat = STFMatFiles(i);
+                fprintf('Wait!----正在处理第 %d 个病人数据 %s \n',i,curSTFMat.name);
+                try
+                    [~,stfName,~] = fileparts(curSTFMat.name);
+                    fileName = stfName(1:end-4);
+                    cstName = [fileName, '.mat'];  % xx.mat
+                    
+                    % load stf pln
+                    load(fullfile(curSTFMat.folder,curSTFMat.name));
+
+                    curCSTMatPath = fullfile(path_of_CSTMat,cstName);
+                    if ~exist(curCSTMatPath, 'file')
+                        fprintf('Ops! ----找不到匹配的 CST 文件: %s. 跳过。\n', cstName);
+                        continue;
+                    end
+                    load(curCSTMatPath);
+                catch ME
+                    fprintf(['Damn!----无法加载病人 %s 数据\n' ...
+                        '错误信息: %s\n'], fileName, ME.message);
+                    continue; % 跳到下一个文件
+                end
+
+                %% 计算DIJ
+                dijSavepath = fullfile(path_of_DIJMat, [fileName,'_dij.mat'] );
+                
+                if exist(dijSavepath, 'file')
+                    fprintf('Info!----DIJ 文件已存在 (%s)，跳过计算。\n', [fileName,'_dij.mat']);
+                    continue;
+                end
+                try
+                    dij = matRad_calcParticleDose(ct,stf,pln,cst);
+                    %% 保存DIJ
+                    save(dijSavepath,'dij','-v7.3');
+                    fprintf('Yeah!----病人 %s 的 DIJ 已保存到 %s。\n', fileName, dijSavepath);
+                catch ME
+                    fprintf(['Damn!----病人 %s 的 DIJ 计算失败\n' ...
+                        '错误信息: %s\n'], fileName, ME.message);
+                    if exist('dij','var'); clear dij; end;
+                    continue;
+                end 
+
+                %% 计算resultGUI
+                resultGUISavepath = fullfile(path_of_resultGUI, [fileName,'_resGUI.mat']);
+                if exist(resultGUISavepath, 'file')
+                    fprintf('Info!----resultGUI 文件已存在 (%s)，跳过计算。\n', [fileName,'_resGUI.mat']);
+                    continue;
+                end
+                try 
+                    new_cst = matRad_resizeCstToGrid(cst,dij.ctGrid.x, dij.ctGrid.y, dij.ctGrid.z, ...
+                        dij.doseGrid.x, dij.doseGrid.y, dij.doseGrid.z);
+                    resultGUI = matRad_fluenceOptimization(dij, cst, pln);
+                    % 保存resultGUI
+                    save(resultGUISavepath,'resultGUI','-v7.3');
+                    fprintf('Yeah!----病人 %s 的 resultGUI 已保存到 %s。\n', fileName, resultGUISavepath);
+                catch ME
+                    fprintf(['Damn!----病人 %s 的 resultGUI 计算失败\n' ...
+                        '错误信息: %s\n'], fileName, ME.message);
+                    if exist('resultGUI','var'); clear resultGUI new_cst; end;
+                end
+
+            end
+        end
+        
+        function autoGenerateResultGUI(obj, path_of_CSTMat, path_of_STFMat, path_of_DIJMat,path_of_resultGUI)
+            % load dij太耗时了
+            % 集成到autoGenrateDIJandResultGUI
+            error("使用autoGenrateDIJandResultGUI");
+        end
+        function autoGetOrgCSV(obj, path_of_CSTMat, path_of_STFMat, path_of_OrgCSV)
+
+            %% 参数验证
+            arguments
+                obj;
+                path_of_CSTMat {autoProcessor.mustBeTextOrEmpty} = [];
+                path_of_STFMat {autoProcessor.mustBeTextOrEmpty} = [];
+                path_of_OrgCSV {autoProcessor.mustBeTextOrEmpty} = [];
+            end
+            %% 路径参数验证与设置
+            %% 如果路径中为空，直接调用autoGenerateDIJandResultGUI
+            if isempty(path_of_CSTMat)
+                if ~isempty(obj.path_of_CSTMat)
+                    path_of_CSTMat = obj.path_of_CSTMat;
+                else
+                    fprintf("Damn!----生成失败: 无法找到原始 CSTMat 文件位置\n" + ...
+                        "         因为传入路径为空\n");
+                    return;
+                end
+            end
+
+
+
+        end
+    end
+    
+    % 主流程工具函数
     methods
-        % 主流程工具函数
+        
         function targetIndex = getTargetIndex(obj,Targets1col, cstSubset)
             % GETTARGETINDEX 找到 cst 中每个匹配 ROI 对应的第一个别名在展平列表中的索引。
             %
@@ -352,9 +692,9 @@ classdef autoProcessor < handle
             
             %% 验证参数
             arguments
-                obj
-                Targets1col (:, 1) cell
-                cstSubset (:, 1) cell
+                obj;
+                Targets1col (:, 1) cell;
+                cstSubset (:, 1) cell;
             end
             % mustBeNonEmpty验证不了 cstSubset (:, 1) cell {mustBeNonEmpty}
             if isempty(Targets1col) || isempty(cstSubset)
@@ -432,7 +772,7 @@ classdef autoProcessor < handle
             end
 
             %% 确保小写&清除空字符串
-            %'UniformOutput', false：告诉 MATLAB，输出结果仍是元胞数组
+            % 'UniformOutput', false：告诉 MATLAB，输出结果仍是元胞数组
             % （因为 lower 对 String 数组操作，返回的 String 数组大小不定）
             Targets1col = cellfun(@lower, Targets1col, 'UniformOutput', false);  
             cstNames = cellfun(@lower, cstSubset(:,1), 'UniformOutput', false);
@@ -456,6 +796,14 @@ classdef autoProcessor < handle
             % Locb 是 M x 1 的数值向量，记录 cstNames(k) 在 allAliasNames 中的位置 (0表示不匹配)。
             [~, Locb] = ismember(cstNames, allAliasNames);
             targetIndices = [find(Locb > 0), targetsRowMap(Locb(Locb > 0))'];
+
+
+            %% TODO
+            % 应该追加判断，是否第四列为空 为空的不要用！
+            % 目前只有48号病人存在ctv1 第四列为空 导致stfmat生成失败
+            % 如何修改，传入参数cst应该是两列 多加一个判断向量isNull即可
+            % 日后再说
+
         end
 
         function oarsIndices = getOARsIndices(obj, OARs, cstSubset)
@@ -473,10 +821,87 @@ classdef autoProcessor < handle
 
         end
 
+        function [stf,pln] = GenerateSigleSTF(obj, path_of_CurCSTMat, pln_in)
+            %% 参数验证
+            arguments
+                obj;
+                path_of_CurCSTMat {autoProcessor.mustBeTextOrEmpty} = [];
+                pln_in {autoProcessor.mustBeValidPlnStructure} = [];
+            end
+            % 好习惯 保证怎么样都有定义
+            stf = [];
+            % pln = struct(); % 会导致赋值失败
+            %% 检查路径
+            if isempty(path_of_CurCSTMat)
+                error('autoProcessor:MissingPath', '路径参数 path_of_CurCSTMat 不允许为空。');
+            end
+            if ~exist(path_of_CurCSTMat,'file')
+                % 如果文件不存在，报告完整路径并退出
+                error('autoProcessor:FileNotFound', 'Damn!----未找到目标CSTMat文件: %s', path_of_CurCSTMat);
+            end
+            
+            %% 加载文件
+            try
+                load(path_of_CurCSTMat);
+            catch ME
+                error('autoProcessor:LoadFailed', '文件加载失败：%s', ME.message);
+            end
+
+            %% 设置pln
+            if isempty(pln_in) % 继承默认的pln
+                pln_in = obj.pln;
+            end
+
+            
+            
+            pln_in.propStf.isoCenter     = ones(pln_in.propStf.numOfBeams,1) * matRad_getIsoCenter(cst,ct,0);
+            pln_in.multScen              = matRad_multScen(ct,'nomScen');
+
+            %% !!! 检查点 1: 在函数内部确认值已存在 !!!
+            % if isempty(pln_in.multScen)
+            %     fprintf('Debug: multScen 在赋值后立即为空！\n');
+            % else
+            %     % 获取结构体数组的元素数量 (N)
+            %     num_scenarios = numel(pln_in.multScen);
+            % 
+            %     fprintf('Debug: multScen 赋值成功，总共包含 %d 个不确定性场景。\n', num_scenarios);
+            % 
+            %     % 获取字段名列表
+            %     meta_fields = fieldnames(pln_in.multScen);
+            % 
+            %     % ----------------------------------------------------
+            %     % 外部循环：遍历结构体数组的每一个元素 (即每一个不确定性场景)
+            %     % ----------------------------------------------------
+            %     for i = 1:num_scenarios
+            %         fprintf('\n========================================\n');
+            %         fprintf('--- 场景编号 %d / %d (pln_in.multScen(%d)) 详细内容 ---\n', i, num_scenarios, i);
+            %         fprintf('========================================\n');
+            %         % 内部循环：遍历当前元素的每一个字段
+            %         for k = 1:numel(meta_fields)
+            %             fieldName = meta_fields{k};
+            % 
+            %             % 访问当前元素 (i) 的当前字段 (fieldName) 的值
+            %             value = pln_in.multScen(i).(fieldName);
+            % 
+            %             fprintf('%s:', fieldName);
+            % 
+            %             % 使用 disp 打印值，即使值是空数组或复杂数组
+            %             disp(value); 
+            %         end
+            %     end
+            % end
+
+            %% Generate Beam Geometry STF
+            pln=pln_in;
+            stf = matRad_generateStf(ct, cst, pln_in);
+
+        end
+
     end
 
+    % 以下验证函数
     methods (Static, Access = private)
-        % 以下验证函数
+        
         function mustBeTextOrEmpty(x)
         % MUSTBETEXTOREMPTY
             if ~isempty(x)
@@ -496,19 +921,42 @@ classdef autoProcessor < handle
                         'OARs 数组第 %d 行的第 1 列必须是非空的字符串数组', i);
                 end
                 
-                % --- 验证第二列：结构体数组及其内部格式 ---
-                constraintArray = organs{i, 2};
-
-                % 1. 验证第二列：必须是结构体数组，且不能是空数组
-                if ~isstruct(constraintArray) || isempty(constraintArray)
+                % =========================================================
+                % --- 验证第二列：必须是包含结构体的元胞数组 (CELL) ---
+                % =========================================================
+                
+                constraintCell = organs{i, 2};
+                
+                % 1. 验证第二列必须是元胞数组 (Cell)
+                if ~iscell(constraintCell)
                     error('Custom:InvalidOARs', ...
-                        'OARs 数组第 %d 行的第 2 列必须是非空的结构体数组', i);
+                        'OARs 数组第 %d 行的第 2 列必须是元胞数组 {}。', i);
+                end
+
+                % 2. 检查元胞数组是否为空或内容是否为空
+                if isempty(constraintCell)
+                    % 允许空 cell 数组 {}，表示没有约束
+                    continue; 
+                end
+
+                % 3. 约束条件列表应位于 cell 数组内部
+                % 假设约束结构体数组是 cell 数组的第一个（也是唯一）元素
+                constraintArray = constraintCell{1}; 
+                
+                % 检查 cell 数组的第一个元素是否是结构体数组
+                if ~isstruct(constraintArray)
+                    error('Custom:InvalidOARs', ...
+                        'OARs 数组第 %d 行的第 2 列的元胞数组中，第一个元素必须是结构体数组。', i);
                 end
                 
-                % 2. 遍历结构体数组中的每一个约束元素
+                % 允许空的结构体数组 []，表示没有约束
+                if isempty(constraintArray)
+                    continue;
+                end
+                
+                % 4. 遍历结构体数组中的每一个约束元素
                 for j = 1:numel(constraintArray)
                     currentConstraint = constraintArray(j); % 提取当前的约束结构体 (struct)
-
                     % 检查字段名是否存在
                     requiredFields = {'className', 'parameters', 'penalty'};
                     if ~all(isfield(currentConstraint, requiredFields))
@@ -517,8 +965,6 @@ classdef autoProcessor < handle
                     end
                     
                     % 验证 .className 字段：必须是单个字符串 
-                    % char vector/ string array/ "" 空字符串
-                    % if ~isstring(currentConstraint.className) || numel(currentConstraint.className) ~= 1
                     if ~( (isstring(currentConstraint.className) && isscalar(currentConstraint.className)) || ...
                         (ischar(currentConstraint.className) && isrow(currentConstraint.className)) )
  
@@ -541,7 +987,17 @@ classdef autoProcessor < handle
             end
             
         end
-        
+
+        function mustBeValidPlnStructure(pln)
+            % MUSTBEVALIDPLNSTRUCTURE
+            % 确保输入 v 是结构体或者为空
+            if isempty(pln)
+                return; % 允许空值
+            end
+            % 如果不为空，则必须是结构体
+            mustBeA(pln, 'struct');
+
+        end
             
 
 
