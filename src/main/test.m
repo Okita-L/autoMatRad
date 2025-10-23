@@ -8,6 +8,15 @@ matRad_cfg = MatRad_Config.instance();
 matRad_cfg.disableGUI = true;
 processor = autoProcessor(projectPath);
 
+load('C:\Users\Administrator\Desktop\DIJ\14-PT3236730_dij.mat');
+load('E:\Workshop\autoMatRad\data\STFMat_data\14-PT3236730_Stf.mat');
+load('E:\Workshop\autoMatRad\data\CSTMat_data\14-PT3236730.mat');
+new_cst = matRad_resizeCstToGrid(cst,dij.ctGrid.x,dij.ctGrid.y,dij.ctGrid.z,...
+            dij.doseGrid.x,dij.doseGrid.y,dij.doseGrid.z);
+load('C:\Users\Administrator\Desktop\resultGUI\14-PT3236730_resultGUI.mat');
+ID = '14-PT3236730';
+origin = Determine_origin(new_cst, dij, stf, dij, resultGUI, ID)
+
 %% test getALLOrgCSV(obj, cst, ct, stf, pln, dij, resultGUI, fileName, path_of_OrgCSV)
 % % 开启并行池
 % currenrPool = gcp('nocreate');
@@ -18,11 +27,11 @@ processor = autoProcessor(projectPath);
 %     disp(['已找到活动的并行池，包含 ', num2str(currentPool.NumWorkers), ' 个工作进程。']);
 %     p = currentPool;
 % end
-load('C:\Users\Administrator\Desktop\DIJ\14-PT3236730_dij.mat');
-load('C:\Users\Administrator\Desktop\resultGUI\14-PT3236730_resultGUI.mat');
-load('C:\Users\Administrator\Desktop\14-PT3236730.mat');
-load('C:\Users\Administrator\Desktop\14-PT3236730_stf.mat')
-processor.getALLOrgCSV(cst,ct,stf,pln,dij,resultGUI,'14-PT3236730', 'C:\Users\Administrator\Desktop\OrgCSV_file');
+% load('C:\Users\Administrator\Desktop\DIJ\14-PT3236730_dij.mat');
+% load('C:\Users\Administrator\Desktop\resultGUI\14-PT3236730_resultGUI.mat');
+% load('C:\Users\Administrator\Desktop\14-PT3236730.mat');
+% load('C:\Users\Administrator\Desktop\14-PT3236730_stf.mat')
+% processor.getALLOrgCSV(cst,ct,stf,pln,dij,resultGUI,'14-PT3236730', 'C:\Users\Administrator\Desktop\OrgCSV_file');
 
 % % 关闭并行池
 % p = gcp; 

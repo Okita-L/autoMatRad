@@ -18,7 +18,6 @@ classdef autoProcessor < handle
         path_of_resultGUI
         path_of_OrgCSV
         
-
         % pln
         pln
     end
@@ -27,14 +26,18 @@ classdef autoProcessor < handle
     methods
 
         function obj = autoProcessor(projectPath)
-            % AUTOPROCESSOR 构造此类的实例
+            % AUTOPROCESSOR: 构造函数——构造此类的实例
             % input:
+            %   projectPath     项目路径 事实上无需传入
             % output:
-            % call:
+            %   an instance of autoProcessor
+            % call: 
+            %   processor = autoProcessor(projectPath)
+            %   processor = autoProcessor()             recommended       
 
             %% 参数验证
             arguments 
-                projectPath {autoProcessor.mustBeTextOrEmpty} = [];
+                projectPath {autoProcessor.mustBeTextOrEmpty} = [];     % mustBeTextOrEmpty 自定义的验证函数
             end
             %% 初始化matRad
             try 
@@ -47,15 +50,16 @@ classdef autoProcessor < handle
             %% 初始化projectPath
             if isempty(projectPath)
                 obj.projectPath = fileparts(mfilename('fullpath')); % 'E:\Workshop\autoMatRad\src\utils\autoProcessor'
-                obj.projectPath = fileparts(obj.projectPath); % 'E:\Workshop\autoMatRad\src\utils'
-                obj.projectPath = fileparts(obj.projectPath); % 'E:\Workshop\autoMatRad\src'
-                obj.projectPath = fileparts(obj.projectPath); % 'E:\Workshop\autoMatRad'
+                obj.projectPath = fileparts(obj.projectPath);       % 'E:\Workshop\autoMatRad\src\utils'
+                obj.projectPath = fileparts(obj.projectPath);       % 'E:\Workshop\autoMatRad\src'
+                obj.projectPath = fileparts(obj.projectPath);       % 'E:\Workshop\autoMatRad'
             else
                 obj.projectPath = projectPath;
             end
             fprintf('projectPath now is %s\n',obj.projectPath);
 
             %% 初始化默认pln设置
+            % 病人间存在一些共性的pln设置 在此处设置
             obj.pln.radiationMode = 'protons';            
             obj.pln.machine       = 'Generic';
 
@@ -89,24 +93,38 @@ classdef autoProcessor < handle
             obj.pln.propOpt.quantityOpt = 'RBExD'; % 新版matRad在这里设置该参数
 
             % dose calculation settings
+            % 若3*3*3实验室现有的机器计算太慢 无法快速验证想法
             obj.pln.propDoseCalc.doseGrid.resolution.x = 5; % [mm]
             obj.pln.propDoseCalc.doseGrid.resolution.y = 5; % [mm]
             obj.pln.propDoseCalc.doseGrid.resolution.z = 5; % [mm]
 
             
             %% 设置各个阶段的路径默认值
-            obj.path_of_Dicom  = fullfile(obj.projectPath,'data','dicom_data');
-            obj.path_of_rawMat = fullfile(obj.projectPath,'data','rawMat_data'); % mat_data
-            obj.path_of_CSTMat = fullfile(obj.projectPath,'data','CSTMat_data'); % cstProcessed_data
-            obj.path_of_STFMat = fullfile(obj.projectPath,'data','STFMat_data'); % matRad_data
-            obj.path_of_DVH_QI = fullfile(obj.projectPath,'data','DVH_QI_data'); % dvh_qi_data
-            obj.path_of_STFCSV = fullfile(obj.projectPath,'data','STFCSV_file'); % stf_csvFiles
-            obj.path_of_DIJMat = fullfile(obj.projectPath,'data','DIJMat_data');
+            % 文件层级
+            % autoMatRad-|
+            %             --dicom_data
+            %             --rawMat_data
+            %             --CSTMat_data
+            %             --STFMat_data
+            %             --DVH_QI_data
+            %             --STFCSV_file
+            %             --DIJMat_data
+            %             --resultGUI_data
+            %             --OrgCSV_file-|
+            %                            --1pt-|
+            %                                   --1pt_chiasm.csv
+            obj.path_of_Dicom     = fullfile(obj.projectPath,'data','dicom_data');
+            obj.path_of_rawMat    = fullfile(obj.projectPath,'data','rawMat_data'); % mat_data
+            obj.path_of_CSTMat    = fullfile(obj.projectPath,'data','CSTMat_data'); % cstProcessed_data
+            obj.path_of_STFMat    = fullfile(obj.projectPath,'data','STFMat_data'); % matRad_data
+            obj.path_of_DVH_QI    = fullfile(obj.projectPath,'data','DVH_QI_data'); % dvh_qi_data
+            obj.path_of_STFCSV    = fullfile(obj.projectPath,'data','STFCSV_file'); % stf_csvFiles
+            obj.path_of_DIJMat    = fullfile(obj.projectPath,'data','DIJMat_data');
             obj.path_of_resultGUI = fullfile(obj.projectPath,'data','resultGUI_data');
-            obj.path_of_OrgCSV = fullfile(obj.projectPath,'data','OrgCSV_file'); % 将包括BRS_data等各个器官的矩阵
+            obj.path_of_OrgCSV    = fullfile(obj.projectPath,'data','OrgCSV_file'); % 将包括BRS_data等各个器官的矩阵
             
             pathsToCreate = {obj.path_of_rawMat, obj.path_of_CSTMat, obj.path_of_STFMat, ...
-                 obj.path_of_DVH_QI, obj.path_of_STFCSV, obj.path_of_DIJMat, obj.path_of_OrgCSV};
+                 obj.path_of_DVH_QI, obj.path_of_STFCSV, obj.path_of_DIJMat, obj.path_of_resultGUI, obj.path_of_OrgCSV};
 
             for k = 1:numel(pathsToCreate)
                 if ~exist(pathsToCreate{k},'dir')
@@ -118,16 +136,16 @@ classdef autoProcessor < handle
          
     end
 
-
     % 主流程方法
     methods
         
         % 以下方法均支持自定义存储路径
         % 修改方法：将目标路径作为第二个参数传入
+        % 一般用法：无需传入任何参数（除了loadDicom），数据保存在autoMatRad\data下
 
         function autoLoadDicomSigle(obj,path_of_Dicom,path_of_rawMat)
             % AUTOLOADDICOMSIGLE: 将DICOM文件加载并转换为mat格式
-            %   这个方法遍历指定路径下的DICOM文件，并转换为matRad所需的结构体
+            %   这个方法遍历指定文件夹下的DICOM文件，并转换为matRad所需的结构体，必须时同一个病人的数据
             %   保存到目标路径————可指定
             %
             % input:
@@ -146,7 +164,8 @@ classdef autoProcessor < handle
                 path_of_rawMat = obj.path_of_rawMat;
             end
 
-            % 检查文件夹是否存在
+            %% 路径检查
+            % 检查路径可用性
             if ~exist(path_of_Dicom,'dir') % 2个参数的exist更快
                 error('Damn!----输入DICOM文件夹不存在或不是一个文件夹: %s', path_of_Dicom)
             else
@@ -164,6 +183,7 @@ classdef autoProcessor < handle
                 return;
             end
             
+            %% 导入dicom
             % 调用matRad的matRad_DicomImporter类实现导入
             importer = matRad_DicomImporter(path_of_Dicom);
             % 清空 RTPlan 文件的导入列表
@@ -185,7 +205,7 @@ classdef autoProcessor < handle
             % 返回值 = 传入参数 或 默认值
             % path_of_rawMat = path_of_rawMat; % 自动继承同名局部变量 无须显示赋值
             % 类属性 = 返回值
-            obj.path_of_rawMat = path_of_rawMat;
+            obj.path_of_rawMat = path_of_rawMat; % 不推荐传入此参数扰乱项目结构
         end
 
         function autoLoadDicomBatch(obj,path_of_Dicom,path_of_rawMat)
@@ -631,22 +651,24 @@ classdef autoProcessor < handle
                         '错误信息: %s\n'], fileName, ME.message);
                         continue;
                     end
-                end
-                try
                     %% 保存DIJ
-                    save(dijSavepath,'dij','-v7.3');
-                    fprintf('Yeah!----病人 %s 的 DIJ 已保存到 %s。\n', fileName, dijSavepath);
-                catch ME
-                    fprintf(['Damn!----病人 %s 的 DIJ 保存失败\n' ...
-                        '错误信息: %s\n'], fileName, ME.message);
-                    if exist('dij','var'); clear dij; end;
-                    continue;
-                end 
+                    try
+                        save(dijSavepath,'dij','-v7.3');
+                        fprintf('Yeah!----病人 %s 的 DIJ 已保存到 %s。\n', fileName, dijSavepath);
+
+                    catch ME
+                        fprintf(['Damn!----病人 %s 的 DIJ 保存失败\n' ...
+                            '错误信息: %s\n'], fileName, ME.message);
+                        if exist('dij','var'); clear dij; end;
+                        continue;
+                    end 
+                end
+                
 
                 %% 计算resultGUI
-                resultGUISavepath = fullfile(path_of_resultGUI, [fileName,'_resGUI.mat']);
+                resultGUISavepath = fullfile(path_of_resultGUI, [fileName,'_resultGUI.mat']);
                 if exist(resultGUISavepath, 'file')
-                    fprintf('Info!----resultGUI 文件已存在 (%s)，跳过计算。\n', [fileName,'_resGUI.mat']);
+                    fprintf('Info!----resultGUI 文件已存在 (%s)，跳过计算。\n', [fileName,'_resultGUI.mat']);
                     continue;
                 end
                 try 
@@ -741,14 +763,14 @@ classdef autoProcessor < handle
 
             %% 获取 DIJ 和 resultGUI
             dijMatFiles = dir(fullfile(path_of_DIJMat, '*_dij.mat'));
-            resultGUIFiles = dir(fullfile(path_of_resultGUI, '*_resGUI.mat'));
+            resultGUIFiles = dir(fullfile(path_of_resultGUI, '*_resultGUI.mat'));
             if calcDIJandResGUI || (numel(dijMatFiles) == 0) || (numel(resultGUIFiles) == 0)
                 fprintf('Info!----检测到DIJ或ResultGUI文件缺失，正在执行生成流程...\n');
                 try
                     [path_of_DIJMat,path_of_resultGUI] = autoGenerateDIJandResultGUI(obj, path_of_CSTMat, path_of_STFMat);
                     fprintf('Info!----文件生成完成。\n');
                     dijMatFiles = dir(fullfile(path_of_DIJMat, '*_dij.mat'));
-                    resultGUIFiles = dir(fullfile(path_of_resultGUI, '*_resGUI.mat'));
+                    resultGUIFiles = dir(fullfile(path_of_resultGUI, '*_resultGUI.mat'));
                 catch ME
                     fprintf("Damn!----DIJ或ResultGUI文件缺失，且生成失败，程序退出\n" + ...
                             "         错误信息：%s",ME.message);
@@ -792,8 +814,10 @@ classdef autoProcessor < handle
                     end
                     load(fullfile(path_of_DIJMat,[dijName,'.mat']));
                     if ~exist(fullfile(path_of_resultGUI,[resultGUIName,'.mat']))
-                        fprintf('Ops! ----找不到匹配的 resultGUI ：%s 跳过 \n', resultGUIName);
-                        continue
+                        fprintf(['Ops! ----找不到匹配的 resultGUI ：%s 跳过 \n' ...
+                                 '         尝试生成中'], resultGUIName);
+                        %% TODO
+                        continue;
                     end
                     load(fullfile(path_of_resultGUI,[resultGUIName,'.mat']));
                 catch ME
@@ -803,7 +827,7 @@ classdef autoProcessor < handle
                 end
 
                 %% 调用 getALLOrgCSV
-                getALLOrgCSV(obj, cst, ct, stf, pln, resultGUI, fileName, path_of_OrgCSV);
+                getALLOrgCSV(obj, cst, ct, stf, pln, dij, resultGUI, fileName, path_of_OrgCSV);
             end
         end
 
@@ -1101,7 +1125,92 @@ classdef autoProcessor < handle
 
         end
 
+        function getALLOrgCSV2(obj, cst, ct, stf, pln, dij, resultGUI, fileName, path_of_OrgCSV)
+            if nargin == 7
+                path_of_OrgCSV = obj.path_of_OrgCSV;
+            end
+            % 
+            newCst = matRad_resizeCstToGrid(cst,dij.ctGrid.x,dij.ctGrid.y,dij.ctGrid.z,...
+                dij.doseGrid.x,dij.doseGrid.y,dij.doseGrid.z);
+            % 
+            DIJ = dij.physicalDose{1}; 
+            if isfield(dij, 'RBE'); DIJ = dij.RBE*DIJ; end
+            voxelDose = DIJ*resultGUI.w; % dose voxel-dose
+            nonZeroIndices = find(voxelDose ~= 0);
+            
+            oarRows = find(strcmp(cst(:,3), 'OAR') & ~cellfun(@isempty,cst(:,6)));
+            if ~exist(fullfile(path_of_OrgCSV, fileName), 'dir'); mkdir(fullfile(path_of_OrgCSV, fileName)); end
+            
+            % 遍历oar
+            for oar=1:numel(oarRows)
+                
+                OAR_Skip_List = {'body', 'body1', 'body2', 'body3'};
+                if any(ismember(lower(cst(:,2)), OAR_Skip_List))
+                    current_oar_name = lower(cst{oarRows(m),2});
+                    if ismember(current_oar_name, OAR_Skip_List)
+                        continue; % 跳过处理当前的 'body' OAR
+                    end
+                end
 
+                oarName=cst{oarRows(oar), 2};
+                V = vertcat(newCst{oarRows(oar),4}{:}); % 提取 形成列向量
+                intersection = intersect(nonZeroIndices, V); % 非零剂量 且属于该oar
+                if isempty(intersection); continue; end % 应该没有为空的可能
+        
+                spotCSum_beam = cumsum([stf.totalNumOfBixels], 'uint32'); % 每条beam的spot数目的累积和 快速确定对应的beamIdx
+                spotBoundaries_beam = [uint32(0), spotCSum_beam];
+        
+                % 本想支持parfor 但是虚拟机上无发开启parpool 而且使用parfor友好的格式接受输出 写入时还需要再转换
+                % origin(length(intersection)) = struct('Index', 0, lower(newCst{oarRows(m),2}),[]);
+                origin = {};
+        
+                % 遍历体素——先保留这层循环
+                for voxel=1:length(intersection)
+                    % 获取beamIdx
+                    voxelIdx = intersection(voxel);
+                    spotGlobalIndices = find(DIJ(voxelIdx,:)); 
+                    % beamIndices(i) 是 spotGlobalIndices(i) 所属的beam索引
+                    beamIndices = discretize(spotGlobalIndices(:), spotBoundaries_beam);
+        
+                    % 预分配结果数组
+                    rayIndices = zeros(length(spotGlobalIndices), 1, 'uint32');
+                    spotIndices = zeros(length(spotGlobalIndices), 1, 'uint32');
+        
+                    % 目标：计算spotGlobalIndices(i) 对应的 ray 局部索引（相对于某一条beam的）
+                    % 思路1：矩阵 横坐标表示beam_i 纵坐标表示beam_i中的ray_j 值为ray_j的全局累积和
+                    %   再加上beam_i之前的所有beam的spot数目的累积和。这样可以得到一个新的边界数组，一边discretize得到ray的索引
+                    % 问题：72条beam 每条beam有1000条左右的ray 是否会太大了
+                    % 结论：不现实 确实太大了
+            
+                    % 思路2：
+                    %   分块：同一个beam的spot 一起查找 便于向量化
+                    %   循环：以免爆内存 对于每个beam循环 72轮
+        
+                    % spotRelativeIndices spot在所属的beam内部的全局索引
+                    spotRelIndicesBeam = spotGlobalIndices - spotBoundaries_beam(beamIndices);
+        
+                    unique_beams = unique(beamIndices);
+                    for beam=1:length(unique_beams)
+                        % 筛选在该beam的spot 全局索引(相对于ray) 局部索引(相对于beam)
+                        spotOfBi = (beamIndices == unique_beams(beam));
+                        spotRelIndicesBi = spotRelIndicesBeam(spotOfBi);
+        
+                        % 查找对应的rayIdx
+                        endSpotCSum_ray_bi = cumsum(cellfun(@numel, {stf(unique_beams(beam)).ray.energy}), 'uint32'); % end cumsum of this ray
+                        startSpotCSum_ray_bi = [uint32(0), endSpotCSum_ray_bi(1:end-1)]; % start sumsum of this ray
+                        rayIndices_bi = discretize(spotRelIndicesBi, startSpotCSum_ray_bi);
+        
+                        % 查找对应的spotIdx
+                        spotIndices_bi = spotRelIndicesBi - startSpotCSum_ray_bi(rayIndices_bi);
+            
+                        rayIndices(spotOfBi) = rayIndices_bi;
+                        spotIndices(spotOfBi) = spotIndices_bi; 
+                    end
+            
+        
+                end
+            end
+        end
     end
 
     % 以下验证函数
