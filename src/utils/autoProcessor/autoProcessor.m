@@ -18,6 +18,7 @@ classdef autoProcessor < handle
         path_of_resultGUI
         path_of_OrgCSV
         
+
         % pln
         pln
     end
@@ -26,18 +27,14 @@ classdef autoProcessor < handle
     methods
 
         function obj = autoProcessor(projectPath)
-            % AUTOPROCESSOR: 构造函数——构造此类的实例
+            % AUTOPROCESSOR 构造此类的实例
             % input:
-            %   projectPath     项目路径 事实上无需传入
             % output:
-            %   an instance of autoProcessor
-            % call: 
-            %   processor = autoProcessor(projectPath)
-            %   processor = autoProcessor()             recommended       
+            % call:
 
             %% 参数验证
             arguments 
-                projectPath {autoProcessor.mustBeTextOrEmpty} = [];     % mustBeTextOrEmpty 自定义的验证函数
+                projectPath {autoProcessor.mustBeTextOrEmpty} = [];
             end
             %% 初始化matRad
             try 
@@ -50,16 +47,15 @@ classdef autoProcessor < handle
             %% 初始化projectPath
             if isempty(projectPath)
                 obj.projectPath = fileparts(mfilename('fullpath')); % 'E:\Workshop\autoMatRad\src\utils\autoProcessor'
-                obj.projectPath = fileparts(obj.projectPath);       % 'E:\Workshop\autoMatRad\src\utils'
-                obj.projectPath = fileparts(obj.projectPath);       % 'E:\Workshop\autoMatRad\src'
-                obj.projectPath = fileparts(obj.projectPath);       % 'E:\Workshop\autoMatRad'
+                obj.projectPath = fileparts(obj.projectPath); % 'E:\Workshop\autoMatRad\src\utils'
+                obj.projectPath = fileparts(obj.projectPath); % 'E:\Workshop\autoMatRad\src'
+                obj.projectPath = fileparts(obj.projectPath); % 'E:\Workshop\autoMatRad'
             else
                 obj.projectPath = projectPath;
             end
             fprintf('projectPath now is %s\n',obj.projectPath);
 
             %% 初始化默认pln设置
-            % 病人间存在一些共性的pln设置 在此处设置
             obj.pln.radiationMode = 'protons';            
             obj.pln.machine       = 'Generic';
 
@@ -93,35 +89,21 @@ classdef autoProcessor < handle
             obj.pln.propOpt.quantityOpt = 'RBExD'; % 新版matRad在这里设置该参数
 
             % dose calculation settings
-            % 若3*3*3实验室现有的机器计算太慢 无法快速验证想法
             obj.pln.propDoseCalc.doseGrid.resolution.x = 5; % [mm]
             obj.pln.propDoseCalc.doseGrid.resolution.y = 5; % [mm]
             obj.pln.propDoseCalc.doseGrid.resolution.z = 5; % [mm]
 
             
             %% 设置各个阶段的路径默认值
-            % 文件层级
-            % autoMatRad-|
-            %             --dicom_data
-            %             --rawMat_data
-            %             --CSTMat_data
-            %             --STFMat_data
-            %             --DVH_QI_data
-            %             --STFCSV_file
-            %             --DIJMat_data
-            %             --resultGUI_data
-            %             --OrgCSV_file-|
-            %                            --1pt-|
-            %                                   --1pt_chiasm.csv
-            obj.path_of_Dicom     = fullfile(obj.projectPath,'data','dicom_data');
-            obj.path_of_rawMat    = fullfile(obj.projectPath,'data','rawMat_data'); % mat_data
-            obj.path_of_CSTMat    = fullfile(obj.projectPath,'data','CSTMat_data'); % cstProcessed_data
-            obj.path_of_STFMat    = fullfile(obj.projectPath,'data','STFMat_data'); % matRad_data
-            obj.path_of_DVH_QI    = fullfile(obj.projectPath,'data','DVH_QI_data'); % dvh_qi_data
-            obj.path_of_STFCSV    = fullfile(obj.projectPath,'data','STFCSV_file'); % stf_csvFiles
-            obj.path_of_DIJMat    = fullfile(obj.projectPath,'data','DIJMat_data');
+            obj.path_of_Dicom  = fullfile(obj.projectPath,'data','dicom_data');
+            obj.path_of_rawMat = fullfile(obj.projectPath,'data','rawMat_data'); % mat_data
+            obj.path_of_CSTMat = fullfile(obj.projectPath,'data','CSTMat_data'); % cstProcessed_data
+            obj.path_of_STFMat = fullfile(obj.projectPath,'data','STFMat_data'); % matRad_data
+            obj.path_of_DVH_QI = fullfile(obj.projectPath,'data','DVH_QI_data'); % dvh_qi_data
+            obj.path_of_STFCSV = fullfile(obj.projectPath,'data','STFCSV_file'); % stf_csvFiles
+            obj.path_of_DIJMat = fullfile(obj.projectPath,'data','DIJMat_data');
             obj.path_of_resultGUI = fullfile(obj.projectPath,'data','resultGUI_data');
-            obj.path_of_OrgCSV    = fullfile(obj.projectPath,'data','OrgCSV_file'); % 将包括BRS_data等各个器官的矩阵
+            obj.path_of_OrgCSV = fullfile(obj.projectPath,'data','OrgCSV_file'); % 将包括BRS_data等各个器官的矩阵
             
             pathsToCreate = {obj.path_of_rawMat, obj.path_of_CSTMat, obj.path_of_STFMat, ...
                  obj.path_of_DVH_QI, obj.path_of_STFCSV, obj.path_of_DIJMat, obj.path_of_resultGUI, obj.path_of_OrgCSV};
@@ -136,16 +118,16 @@ classdef autoProcessor < handle
          
     end
 
+
     % 主流程方法
     methods
         
         % 以下方法均支持自定义存储路径
         % 修改方法：将目标路径作为第二个参数传入
-        % 一般用法：无需传入任何参数（除了loadDicom），数据保存在autoMatRad\data下
 
         function autoLoadDicomSigle(obj,path_of_Dicom,path_of_rawMat)
             % AUTOLOADDICOMSIGLE: 将DICOM文件加载并转换为mat格式
-            %   这个方法遍历指定文件夹下的DICOM文件，并转换为matRad所需的结构体，必须时同一个病人的数据
+            %   这个方法遍历指定路径下的DICOM文件，并转换为matRad所需的结构体
             %   保存到目标路径————可指定
             %
             % input:
@@ -164,8 +146,7 @@ classdef autoProcessor < handle
                 path_of_rawMat = obj.path_of_rawMat;
             end
 
-            %% 路径检查
-            % 检查路径可用性
+            % 检查文件夹是否存在
             if ~exist(path_of_Dicom,'dir') % 2个参数的exist更快
                 error('Damn!----输入DICOM文件夹不存在或不是一个文件夹: %s', path_of_Dicom)
             else
@@ -183,7 +164,6 @@ classdef autoProcessor < handle
                 return;
             end
             
-            %% 导入dicom
             % 调用matRad的matRad_DicomImporter类实现导入
             importer = matRad_DicomImporter(path_of_Dicom);
             % 清空 RTPlan 文件的导入列表
@@ -205,7 +185,7 @@ classdef autoProcessor < handle
             % 返回值 = 传入参数 或 默认值
             % path_of_rawMat = path_of_rawMat; % 自动继承同名局部变量 无须显示赋值
             % 类属性 = 返回值
-            obj.path_of_rawMat = path_of_rawMat; % 不推荐传入此参数扰乱项目结构
+            obj.path_of_rawMat = path_of_rawMat;
         end
 
         function autoLoadDicomBatch(obj,path_of_Dicom,path_of_rawMat)
@@ -779,7 +759,7 @@ classdef autoProcessor < handle
             end
             
             %% 
-            for i=1:numel(dijMatFiles)
+            for i=1%:numel(dijMatFiles)
                 % 预清除 防止干扰
                 % clearvars stf pln cst ct dij resultGUI;
 
@@ -814,10 +794,8 @@ classdef autoProcessor < handle
                     end
                     load(fullfile(path_of_DIJMat,[dijName,'.mat']));
                     if ~exist(fullfile(path_of_resultGUI,[resultGUIName,'.mat']))
-                        fprintf(['Ops! ----找不到匹配的 resultGUI ：%s 跳过 \n' ...
-                                 '         尝试生成中'], resultGUIName);
-                        %% TODO
-                        continue;
+                        fprintf('Ops! ----找不到匹配的 resultGUI ：%s 跳过 \n', resultGUIName);
+                        continue
                     end
                     load(fullfile(path_of_resultGUI,[resultGUIName,'.mat']));
                 catch ME
@@ -827,10 +805,108 @@ classdef autoProcessor < handle
                 end
 
                 %% 调用 getALLOrgCSV
-                getALLOrgCSV(obj, cst, ct, stf, pln, dij, resultGUI, fileName, path_of_OrgCSV);
+                getALLOrgCSV3(obj, cst, ct, stf, pln, dij, resultGUI, fileName, path_of_OrgCSV);
             end
         end
 
+        function autoGetOrgCSV2(obj, path_of_CSTMat, path_of_STFMat, path_of_OrgCSV)
+            %% 参数验证
+            arguments
+                obj;
+                path_of_CSTMat {autoProcessor.mustBeTextOrEmpty} = '';
+                path_of_STFMat {autoProcessor.mustBeTextOrEmpty} = '';
+                path_of_OrgCSV {autoProcessor.mustBeTextOrEmpty} = '';
+            end
+            %% 路径参数验证与设置
+            % 如果路径中为空，直接调用autoGenerateDIJandResultGUI 生成并保存数据
+            if isempty(path_of_CSTMat)
+                if ~isempty(obj.path_of_CSTMat)
+                    path_of_CSTMat = obj.path_of_CSTMat;
+                else
+                    fprintf("Damn!----生成失败: 无法找到原始 CSTMat 文件位置\n" + ...
+                        "         因为传入路径为空\n");
+                    return;
+                end
+            end
+            if isempty(path_of_STFMat)
+                if ~isempty(obj.path_of_STFMat)
+                    path_of_STFMat = obj.path_of_STFMat;
+                else
+                    fprintf("Damn!----导入失败: 无法找到原始 STFMat 文件位置\n" + ...
+                        "         因为传入路径为空\n");
+                    return;
+                end
+            end
+
+            if isempty(path_of_OrgCSV)
+                if ~isempty(obj.path_of_OrgCSV)
+                    path_of_OrgCSV = obj.path_of_OrgCSV;
+                end
+            end
+            if ~exist(path_of_OrgCSV, 'dir')
+                mkdir(path_of_OrgCSV);
+            end
+
+            cstMatFiles = dir(fullfile(path_of_CSTMat, '*.mat'));    
+            %% 
+            for i=1:numel(cstMatFiles)
+                % 预清除 防止干扰
+                % clearvars stf pln cst ct dij resultGUI;
+
+                curCSTMat = cstMatFiles(i);
+                fprintf('Wait!----正在处理第 %d 个病人数据 %s \n',i,curCSTMat.name);
+                tic;
+                %% 导入数据
+                try
+                    % 均指文件名 不含扩展
+                    [~,fileName,~] = fileparts(curCSTMat.name);
+                    cstName = fileName;
+                    stfName = [fileName, '_Stf'];
+                    % dijName = [fileName,'_dij'];
+                    % resultGUIName = [fileName, '_resultGUI'];
+
+                    % load stf pln
+                    if ~exist(fullfile(path_of_STFMat,[stfName,'.mat']))
+                        fprintf('Ops! ----找不到匹配的 STF PLN ：%s 跳过 \n', stfName);
+                        continue;
+                    end
+                    load(fullfile(path_of_STFMat,[stfName,'.mat']));
+                    
+                    % load cst ct
+                    if ~exist(fullfile(path_of_CSTMat,[cstName,'.mat']))
+                        fprintf('Ops! ----找不到匹配的 CST CT ：%s 跳过 \n', cstName);
+                        continue
+                    end 
+                    load(fullfile(path_of_CSTMat,[cstName,'.mat']));
+                catch ME
+                    fprintf(['Damn!----无法加载病人 %s 数据\n' ...
+                        '错误信息：%s\n'], fileName, ME.message);
+                    continue;
+                end
+
+                %% generate dij and resultGUI
+                try
+                    dij = matRad_calcParticleDose(ct,stf,pln,cst);
+                catch ME
+                    fprintf(['Damn!----无法calc病人 %s DIJ\n' ...
+                        '错误信息：%s\n'], fileName, ME.message);
+                    continue;
+                end
+                try
+                    resultGUI = matRad_fluenceOptimization(dij, cst, pln);
+                catch M
+                    fprintf(['Damn!----无法calc病人 %s resultGUI\n' ...
+                        '错误信息：%s\n'], fileName, ME.message);
+                    continue;
+                end
+
+                %% 调用 getALLOrgCSV
+                getALLOrgCSV3(obj, cst, ct, stf, pln, dij, resultGUI, fileName, path_of_OrgCSV);
+
+                elapsed_time = toc;
+                
+            end
+        end
     end
     
     % 主流程工具函数
@@ -1080,44 +1156,61 @@ classdef autoProcessor < handle
                 DIJ = dij.RBE*DIJ;
             end
 
-            vixelDose = DIJ*resultGUI.w; % dose voxel-dose
-            nonZeroIndices = find(vixelDose ~= 0);
+            voxelDose = DIJ*resultGUI.w; % dose voxel-dose
+            nonZeroIndices = find(voxelDose ~= 0);
             
             oarRows = find(strcmp(cst(:,3), 'OAR') & ~cellfun(@isempty,cst(:,6)));
+            if ~exist(fullfile(path_of_OrgCSV, fileName), 'dir'); mkdir(fullfile(path_of_OrgCSV, fileName)); end
 
-            for m=1:numel(oarRows)
+            for m=1:numel(oarRows) 
+                OAR_Skip_List = {'body', 'body1', 'body2', 'body3'};
+                if any(ismember(lower(cst(:,2)), OAR_Skip_List))
+                    current_oar_name = lower(cst{oarRows(m),2});
+                    if ismember(current_oar_name, OAR_Skip_List)
+                        continue; % 跳过处理当前的 'body' OAR
+                    end
+                end
                 V=[vertcat(newCst{oarRows(m),4}{:})];
                 intersection = intersect(nonZeroIndices, V);
+                if isempty(intersection); continue; end % 应该没有为空的可能
 
-                total_num_spot = cumsum([stf.totalNumOfBixels]);
-
-                origin = {};
-                for i = 1:length(intersection)
-                    Index = intersection(i);
-                    Di = DIJ(Index,:);
-                    num_spot = find(Di);
+                csum_spot_beam = cumsum([stf.totalNumOfBixels]); % 每条beam的spot数目的累积和
                 
-                    for j = 1:length(num_spot)
-                        beam_indx = min(find(num_spot(j)<total_num_spot));    
-                        Num_spot_beam = [];
-                        for k = 1:numel(stf(beam_indx).ray)
-                             num_spot_ray = numel(stf(beam_indx).ray(k).energy);
-                             Num_spot_beam = [Num_spot_beam num_spot_ray];
-                        end
-                        numel_spot_beam = cumsum(Num_spot_beam);
-                        if beam_indx == 1
-                             ray_indx = min(find(num_spot(j)<numel_spot_beam));
-                             spot_indx = numel_spot_beam(ray_indx) - num_spot(j);
+                % 遍历体素
+                % origin(length(intersection)) = struct('Index', 0, lower(newCst{oarRows(m),2}),[]);
+                origin = {};
+                for i=1:length(intersection)
+                    voxelIdx = intersection(i);
+                    % DIJ(i,j)表示第j个spot对第i个voxel的剂量贡献
+                    % DIJ(vocelIdx,:)
+                    spotIdxVector = find(DIJ(voxelIdx,:));    % 原名num_spot所有贡献了剂量的spot的索引 返回值是行向量 每个元素是索引
+                    [~, beam_indices] = find( bsxfun(@gt, csum_spot_beam, spotIdxVector(:)), ...
+                        length(spotIdxVector), 'first' );     % 根据spot索引所在的范围确定对应的beam索引
+
+                    % 遍历spot
+                    for j=1:length(spotIdxVector)
+                        beam_indx = beam_indices(j);
+
+                        % Num_spot_beam 每条ray的能量层级——也即spot的数量
+                        if isempty(stf(beam_indx).ray)  % stf(beam_indx).ray 该beam的ray数目
+                            csum_spot_ray = [];  % 一个beam中每条ray的spot数目的累积和 energy字段每一个能量层级就是一个spot
                         else
-                            spot_num = numel_spot_beam + total_num_spot(beam_indx-1);
-                            ray_indx = min(find(num_spot(j)<spot_num));
-                            spot_indx = spot_num(ray_indx) - num_spot(j);
+                            csum_spot_ray = cellfun(@numel, {stf(beam_indx).ray.energy}); 
                         end
-                        origin{i,1} = Index;
+                        numel_spot_beam = cumsum(csum_spot_ray); % 该beam的spot总数么？
+                        if beam_indx == 1
+                             ray_indx = min(find(spotIdxVector(j)<numel_spot_beam));
+                             spot_indx = numel_spot_beam(ray_indx) - spotIdxVector(j);
+                        else
+                            spot_num = numel_spot_beam + csum_spot_beam(beam_indx-1);
+                            ray_indx = min(find(spotIdxVector(j)<spot_num));
+                            spot_indx = spot_num(ray_indx) - spotIdxVector(j);
+                        end
+                        
+                        origin{i,1} = voxelIdx;
                         origin{i,j+1} =[beam_indx ray_indx spot_indx];
                     end
-                    
-                    
+
                 end
                 savepath = fullfile(fullfile(path_of_OrgCSV,fileName), ['_',cst{oarRows(m),2},'.csv']);
                 writecell(origin, savepath);
@@ -1129,7 +1222,7 @@ classdef autoProcessor < handle
             if nargin == 7
                 path_of_OrgCSV = obj.path_of_OrgCSV;
             end
-            % 
+            %%
             newCst = matRad_resizeCstToGrid(cst,dij.ctGrid.x,dij.ctGrid.y,dij.ctGrid.z,...
                 dij.doseGrid.x,dij.doseGrid.y,dij.doseGrid.z);
             % 
@@ -1141,26 +1234,29 @@ classdef autoProcessor < handle
             oarRows = find(strcmp(cst(:,3), 'OAR') & ~cellfun(@isempty,cst(:,6)));
             if ~exist(fullfile(path_of_OrgCSV, fileName), 'dir'); mkdir(fullfile(path_of_OrgCSV, fileName)); end
             
-            % 遍历oar
+            %% 遍历oar
             for oar=1:numel(oarRows)
-                
-                OAR_Skip_List = {'body', 'body1', 'body2', 'body3'};
+                OAR_Skip_List = {'body', 'body1', 'body2', 'body3', 'brainstem'};
                 if any(ismember(lower(cst(:,2)), OAR_Skip_List))
-                    current_oar_name = lower(cst{oarRows(m),2});
+                    current_oar_name = lower(cst{oarRows(oar),2});
                     if ismember(current_oar_name, OAR_Skip_List)
                         continue; % 跳过处理当前的 'body' OAR
                     end
                 end
 
+                % stream write
                 oarName=cst{oarRows(oar), 2};
+                savepath = fullfile(fullfile(path_of_OrgCSV,fileName), ['_',cst{oarRows(oar),2},'.csv']);
+                fid = fopen(savepath, 'w');
+
                 V = vertcat(newCst{oarRows(oar),4}{:}); % 提取 形成列向量
                 intersection = intersect(nonZeroIndices, V); % 非零剂量 且属于该oar
                 if isempty(intersection); continue; end % 应该没有为空的可能
         
-                spotCSum_beam = cumsum([stf.totalNumOfBixels], 'uint32'); % 每条beam的spot数目的累积和 快速确定对应的beamIdx
-                spotBoundaries_beam = [uint32(0), spotCSum_beam];
+                spotCSum_beam = cumsum([stf.totalNumOfBixels]); % 每条beam的spot数目的累积和 快速确定对应的beamIdx
+                spotBoundaries_beam = [0, spotCSum_beam];
         
-                % 本想支持parfor 但是虚拟机上无发开启parpool 而且使用parfor友好的格式接受输出 写入时还需要再转换
+                % 本想支持parfor 但是虚拟机上can't开启parpool 而且使用parfor友好的格式接受输出 写入时还需要再转换
                 % origin(length(intersection)) = struct('Index', 0, lower(newCst{oarRows(m),2}),[]);
                 origin = {};
         
@@ -1168,49 +1264,208 @@ classdef autoProcessor < handle
                 for voxel=1:length(intersection)
                     % 获取beamIdx
                     voxelIdx = intersection(voxel);
-                    spotGlobalIndices = find(DIJ(voxelIdx,:)); 
+                    spotGlobalIndices = (find(DIJ(voxelIdx,:)))'; 
                     % beamIndices(i) 是 spotGlobalIndices(i) 所属的beam索引
-                    beamIndices = discretize(spotGlobalIndices(:), spotBoundaries_beam);
+                    beamIndices = discretize(spotGlobalIndices(:), spotBoundaries_beam); % col vector
         
-                    % 预分配结果数组
-                    rayIndices = zeros(length(spotGlobalIndices), 1, 'uint32');
-                    spotIndices = zeros(length(spotGlobalIndices), 1, 'uint32');
-        
-                    % 目标：计算spotGlobalIndices(i) 对应的 ray 局部索引（相对于某一条beam的）
-                    % 思路1：矩阵 横坐标表示beam_i 纵坐标表示beam_i中的ray_j 值为ray_j的全局累积和
-                    %   再加上beam_i之前的所有beam的spot数目的累积和。这样可以得到一个新的边界数组，一边discretize得到ray的索引
-                    % 问题：72条beam 每条beam有1000条左右的ray 是否会太大了
-                    % 结论：不现实 确实太大了
+                    % 预分配结果数组---- turns to be a bad idea
+                    % rayIndices = zeros(length(spotGlobalIndices), 1);
+                    % spotIndices = zeros(length(spotGlobalIndices), 1);
             
                     % 思路2：
                     %   分块：同一个beam的spot 一起查找 便于向量化
                     %   循环：以免爆内存 对于每个beam循环 72轮
         
                     % spotRelativeIndices spot在所属的beam内部的全局索引
-                    spotRelIndicesBeam = spotGlobalIndices - spotBoundaries_beam(beamIndices);
+                    % beamIndices is a col vector, so there is error about
+                    % broadcast operation which products Nan in spotRelIndicesBeam
+                    % spotRelIndicesBeam = spotGlobalIndices - spotBoundaries_beam(beamIndices);
+                    spotRelIndicesBeam = spotGlobalIndices(:) - spotBoundaries_beam(beamIndices(:));
+                    % spotGlobalIndices is 1-based, spotBoundaries_beam
+                    %   starts with (0, xx]
         
                     unique_beams = unique(beamIndices);
+                    triIdx = []; % index to be stored
                     for beam=1:length(unique_beams)
                         % 筛选在该beam的spot 全局索引(相对于ray) 局部索引(相对于beam)
                         spotOfBi = (beamIndices == unique_beams(beam));
                         spotRelIndicesBi = spotRelIndicesBeam(spotOfBi);
         
                         % 查找对应的rayIdx
-                        endSpotCSum_ray_bi = cumsum(cellfun(@numel, {stf(unique_beams(beam)).ray.energy}), 'uint32'); % end cumsum of this ray
-                        startSpotCSum_ray_bi = [uint32(0), endSpotCSum_ray_bi(1:end-1)]; % start sumsum of this ray
+                        endSpotCSum_ray_bi = cumsum(cellfun(@numel, {stf(unique_beams(beam)).ray.energy})); % end cumsum of this ray
+                        startSpotCSum_ray_bi = [0, endSpotCSum_ray_bi(1:end-1)]; % start sumsum of this ray
                         rayIndices_bi = discretize(spotRelIndicesBi, startSpotCSum_ray_bi);
-        
+                        rayIndices_bi(isnan(rayIndices_bi)) = 1;  % 默认放入第一个ray in case that spotRelIndicesBi even though that is impossible
+                        % if spotRelIndicesBi(1) = 0 rayIndices_bi will
+                        %   be Nan. and it is possible
+                        % so add this
+                        
+                        
+                        
                         % 查找对应的spotIdx
-                        spotIndices_bi = spotRelIndicesBi - startSpotCSum_ray_bi(rayIndices_bi);
+                        spotIndices_bi = spotRelIndicesBi(:) - startSpotCSum_ray_bi(rayIndices_bi(:))';
             
-                        rayIndices(spotOfBi) = rayIndices_bi;
-                        spotIndices(spotOfBi) = spotIndices_bi; 
+                        % daoriao index plan
+                        raysLen = double(cellfun(@numel, {stf(unique_beams(beam)).ray.energy})');
+                        spotIndices_bi = raysLen(rayIndices_bi) - spotIndices_bi;
+
+                        % error: Unable to perform assignment because the left and right sides have a different number of elements.
+                        % cause: spotOfBi is logical col vector with all
+                        %   infomation, but spotIndices_bi just contains those
+                        %   spots in the beam and lose the infomation of
+                        %   gloabal indices---- though we dont neef that
+                        % rayIndices(spotOfBi) = rayIndices_bi;
+                        % spotIndices(spotOfBi) = spotIndices_bi; 
+
+                        % 拼接 [beam ray spot]
+                        triIdx = [triIdx; [repmat(unique_beams(beam), numel(rayIndices_bi), 1), ...
+                           rayIndices_bi(:), spotIndices_bi(:)]];
                     end
-            
+
+                    fprintf(fid, '%d', voxelIdx); % 写体素索引
+                    for t = 1:size(triIdx, 1)
+                        fprintf(fid, ',%d,%d,%d', triIdx(t, 1), triIdx(t, 2), triIdx(t, 3));
+                    end
+                    fprintf(fid, '\n');
         
                 end
+                fclose(fid);
+                fprintf('Finished writing OAR: %s → %s\n', oarName, savepath);
             end
         end
+   
+        function getALLOrgCSV3(obj, cst, ct, stf, pln, dij, resultGUI, fileName, path_of_OrgCSV)
+            if nargin == 7
+                path_of_OrgCSV = obj.path_of_OrgCSV;
+            end
+            %%
+            newCst = matRad_resizeCstToGrid(cst,dij.ctGrid.x,dij.ctGrid.y,dij.ctGrid.z,...
+                dij.doseGrid.x,dij.doseGrid.y,dij.doseGrid.z);
+            % 
+            DIJ = dij.physicalDose{1}; 
+            if isfield(dij, 'RBE'); DIJ = dij.RBE*DIJ; end
+            voxelDose = DIJ*resultGUI.w; % dose voxel-dose
+            nonZeroIndices = find(voxelDose ~= 0);
+        
+            oarRows = find(strcmp(cst(:,3), 'OAR') & ~cellfun(@isempty,cst(:,6)));
+            if ~exist(fullfile(path_of_OrgCSV, fileName), 'dir')
+                mkdir(fullfile(path_of_OrgCSV, fileName));
+            end
+        
+            %% 遍历oar
+            for oar=1:numel(oarRows)
+                OAR_Skip_List = {'body', 'body1', 'body2', 'body3'}; 
+                if any(ismember(lower(cst(:,2)), OAR_Skip_List))
+                    current_oar_name = lower(cst{oarRows(oar),2});
+                    if ismember(current_oar_name, OAR_Skip_List)
+                        continue; % 跳过处理当前的 'body' OAR
+                    end
+                end
+        
+                % stream write
+                oarName = cst{oarRows(oar), 2};
+                savepath = fullfile(fullfile(path_of_OrgCSV,fileName), ...
+                    ['_',cst{oarRows(oar),2},'.csv']);
+                fid = fopen(savepath, 'w');
+        
+                % ====== 初始化写入缓冲区 ======
+                bufferSize = 50; % 可调：每200行写入一次
+                buffer = strings(bufferSize, 1);
+                bufCount = 0;
+        
+                V = vertcat(newCst{oarRows(oar),4}{:}); % 提取 形成列向量
+                intersection = intersect(nonZeroIndices, V); % 非零剂量 且属于该oar
+                if isempty(intersection); continue; end % 应该没有为空的可能
+        
+                spotCSum_beam = cumsum([stf.totalNumOfBixels]); % 每条beam的spot数目的累积和 快速确定对应的beamIdx
+                spotBoundaries_beam = [0, spotCSum_beam];
+        
+                % 本想支持parfor 但是虚拟机上can't开启parpool 而且使用parfor友好的格式接受输出 写入时还需要再转换
+                % origin(length(intersection)) = struct('Index', 0, lower(newCst{oarRows(m),2}),[]);
+                origin = {};
+        
+                % 遍历体素——先保留这层循环
+                for voxel=1:length(intersection)
+                    % 获取beamIdx
+                    voxelIdx = intersection(voxel);
+                    spotGlobalIndices = (find(DIJ(voxelIdx,:)))'; 
+                    % beamIndices(i) 是 spotGlobalIndices(i) 所属的beam索引
+                    beamIndices = discretize(spotGlobalIndices(:), spotBoundaries_beam); % col vector
+        
+                    % 预分配结果数组---- turns to be a bad idea
+                    % rayIndices = zeros(length(spotGlobalIndices), 1);
+                    % spotIndices = zeros(length(spotGlobalIndices), 1);
+        
+                    % 思路2：
+                    %   分块：同一个beam的spot 一起查找 便于向量化
+                    %   循环：以免爆内存 对于每个beam循环 72轮
+        
+                    % spotRelativeIndices spot在所属的beam内部的全局索引
+                    % beamIndices is a col vector, so there is error about
+                    % broadcast operation which products Nan in spotRelIndicesBeam
+                    % spotRelIndicesBeam = spotGlobalIndices - spotBoundaries_beam(beamIndices);
+                    spotRelIndicesBeam = spotGlobalIndices(:) - spotBoundaries_beam(beamIndices(:))';
+                    % spotGlobalIndices is 1-based, spotBoundaries_beam
+                    %   starts with (0, xx]
+        
+                    unique_beams = unique(beamIndices);
+                    triIdx = []; % index to be stored
+                    for beam=1:length(unique_beams)
+                        % 筛选在该beam的spot 全局索引(相对于ray) 局部索引(相对于beam)
+                        spotOfBi = (beamIndices == unique_beams(beam));
+                        spotRelIndicesBi = spotRelIndicesBeam(spotOfBi);
+        
+                        % 查找对应的rayIdx
+                        spotBoundaries_ray = [0, cumsum(cellfun(@numel, {stf(unique_beams(beam)).ray.energy}))]; % start sumsum of this ray
+                        rayIndices_bi = discretize(spotRelIndicesBi, spotBoundaries_ray);
+                        % rayIndices_bi(isnan(rayIndices_bi)) = 1;  % 默认放入第一个ray in case that spotRelIndicesBi even though that is impossible
+        
+                        % 查找对应的spotIdx
+                        spotIndices_bi = spotRelIndicesBi(:) - spotBoundaries_ray(rayIndices_bi(:))';
+        
+                        % daoriao index plan
+                        raysLen = double(cellfun(@numel, {stf(unique_beams(beam)).ray.energy})');
+                        spotIndices_bi = raysLen(rayIndices_bi) - spotIndices_bi;
+                        if any(spotIndices_bi < 0)
+                           disp('存在负数');
+                           keyboard; 
+                        end
+                       
+        
+                        % 拼接 [beam ray spot]
+                        triIdx = [triIdx; [repmat(unique_beams(beam), numel(rayIndices_bi), 1), ...
+                            rayIndices_bi(:), spotIndices_bi(:)]];
+                    end
+        
+                    % ==== 构造当前体素的行字符串 ====
+                    % lineStr = sprintf('%d', voxelIdx); % 写体素索引
+                    % for t = 1:size(triIdx, 1)
+                    %     lineStr = [lineStr, sprintf(',%d,%d,%d', triIdx(t, 1), triIdx(t, 2), triIdx(t, 3))];
+                    % end
+                    lineStr = sprintf('%d%s', voxelIdx, sprintf(',%d,%d,%d', triIdx'));
+        
+                    % ==== 写入缓冲区 ====
+                    bufCount = bufCount + 1;
+                    buffer(bufCount) = lineStr;
+        
+                    % 每 bufferSize 行写入一次
+                    if bufCount == bufferSize
+                        fprintf(fid, '%s\n', buffer);
+                        bufCount = 0;
+                    end
+                end
+        
+                % ==== 写入剩余行 ====
+                if bufCount > 0
+                    fprintf(fid, '%s\n', buffer(1:bufCount));
+                end
+        
+                fclose(fid);
+                fprintf('Finished writing OAR: %s → %s\n', oarName, savepath);
+            end
+        end
+
+        
     end
 
     % 以下验证函数
@@ -1326,14 +1581,6 @@ classdef autoProcessor < handle
 
 
         
-
-
-
-
-        
-
-
-
 
 
 

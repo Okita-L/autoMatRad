@@ -8,15 +8,68 @@ matRad_cfg = MatRad_Config.instance();
 matRad_cfg.disableGUI = true;
 processor = autoProcessor(projectPath);
 
-load('C:\Users\Administrator\Desktop\DIJ\14-PT3236730_dij.mat');
-load('E:\Workshop\autoMatRad\data\STFMat_data\14-PT3236730_Stf.mat');
-load('E:\Workshop\autoMatRad\data\CSTMat_data\14-PT3236730.mat');
-new_cst = matRad_resizeCstToGrid(cst,dij.ctGrid.x,dij.ctGrid.y,dij.ctGrid.z,...
-            dij.doseGrid.x,dij.doseGrid.y,dij.doseGrid.z);
-load('C:\Users\Administrator\Desktop\resultGUI\14-PT3236730_resultGUI.mat');
-ID = '14-PT3236730';
-origin = Determine_origin(new_cst, dij, stf, dij, resultGUI, ID)
+%% 限制参数设置
+% % 最后是一个struct 应该被放到一个cell中
+% constraintOfTarget
+% constraintOfTarget1.className = 'DoseObjectives.matRad_SquaredDeviation';
+% constraintOfTarget1.parameters = {}; % 否则matlab不知道这是一个元胞数组
+% constraintOfTarget1.parameters{1} = 54;
+% constraintOfTarget1.penalty = 500;
+% 
+% constraintOfTarget2.className = 'DoseObjectives.matRad_MaxDVH';
+% constraintOfTarget2.parameters = {};
+% constraintOfTarget2.parameters = {57.2,2};
+% constraintOfTarget2.penalty = 200;
+% 
+% constraintOfTarget3.className = 'DoseObjectives.matRad_MinDVH';
+% constraintOfTarget3.parameters = {};
+% constraintOfTarget3.parameters = {51.3,95};
+% constraintOfTarget3.penalty = 200;
+% 
+% constraintOfTarget4.className = 'DoseObjectives.matRad_SquaredOverdosing';
+% constraintOfTarget4.parameters={};
+% constraintOfTarget4.parameters{1} = 59.4;
+% constraintOfTarget4.penalty = 100;
+% 
+% 
+% % constrainOfOARs
+% constraint.className = 'DoseObjectives.matRad_SquaredOverdosing';
+% constraint.parameters={};
+% constraint.parameters{1} = 54;
+% constraint.penalty = 100;
+% 
+% 
+% % constraintOfParotid
+% constraintOfParotid1.className = constraint.className;
+% constraintOfParotid1.parameters={};
+% constraintOfParotid1.parameters{1} = 28;
+% constraintOfParotid1.penalty = 100;
+% 
+% constraintOfParotid2.className = 'DoseObjectives.matRad_MeanDose';
+% constraintOfParotid2.parameters={};
+% constraintOfParotid2.parameters{1} = 26;
+% constraintOfParotid2.penalty = 100;
+% % constraintOfBody
+% constraintOfBody1.className = constraint.className;
+% constraintOfBody1.parameters = {};
+% constraintOfBody1.parameters{1} = 55;
+% constraintOfBody1.penalty = 100;
 
+%% ROI设置
+% Targets = {["ctv1", "ctv", "ctv2"], {constraintOfTarget1; constraintOfTarget2; constraintOfTarget3; constraintOfTarget4}};
+% OARs = { ...
+%     ["body", "body1", "body3"], {constraintOfBody1};  % 将 constraintOfBody1 放入 {}
+%     ["brainstem"],              {constraint};         % 将 constraint 放入 {}
+%     ["opticnerve l"],           {constraint};         % 将 constraint 放入 {}
+%     ["opticnerve r"],           {constraint};         % 将 constraint 放入 {}
+%     ["opticchiasm","chiasm"],   {constraint};         % 将 constraint 放入 {}
+%     ["parotid r"],              {constraintOfParotid1; constraintOfParotid2}; % 将 constraintOfParotid1 放入 {}
+%     ["parotid l"],              {constraintOfParotid1; constraintOfParotid2}; % 将 constraintOfParotid1 放入 {}
+%     };
+
+%%
+% processor.autoProcessCST(OARs,Targets);
+processor.autoGenerateSTF();
 %% test getALLOrgCSV(obj, cst, ct, stf, pln, dij, resultGUI, fileName, path_of_OrgCSV)
 % % 开启并行池
 % currenrPool = gcp('nocreate');

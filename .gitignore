@@ -6,4 +6,13 @@ codeBySK/
 *.txt
 *.text
 *.zip
+*.csv
+*.mat
+
+
+// as for my project, I ignore that
+old.m
+pCT.mat
+test
+test.m
 
